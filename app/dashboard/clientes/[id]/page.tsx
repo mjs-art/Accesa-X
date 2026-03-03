@@ -126,7 +126,7 @@ export default function ClientePage() {
       .eq('nombre_cliente', cliente?.nombre ?? '')
       .order('uploaded_at', { ascending: false })
 
-    setContratos((data as Contrato[]) ?? [])
+    setContratos((data as unknown as Contrato[]) ?? [])
     setLoadingContratos(false)
   }
 

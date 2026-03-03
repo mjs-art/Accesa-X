@@ -140,7 +140,7 @@ export default function AdminSolicitudPage() {
       .eq('id', id)
       .single()
 
-    setApp(data as ApplicationDetail ?? null)
+    setApp(data as unknown as ApplicationDetail ?? null)
   }
 
   async function fetchNotes() {
@@ -150,7 +150,7 @@ export default function AdminSolicitudPage() {
       .eq('credit_application_id', id)
       .order('created_at', { ascending: true })
 
-    setNotes((data as Note[]) ?? [])
+    setNotes((data as unknown as Note[]) ?? [])
   }
 
   async function changeStatus(newStatus: string, auditText: string) {

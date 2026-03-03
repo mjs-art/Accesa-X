@@ -98,7 +98,7 @@ export default function ContratoPage() {
       .select('id, nombre_cliente, storage_path, analysis_result')
       .eq('id', contractId)
       .single()
-    setContract(data as Contract ?? null)
+    setContract(data as unknown as Contract ?? null)
     setLoading(false)
   }
 

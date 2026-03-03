@@ -155,7 +155,7 @@ export default function SolicitarCreditoPage() {
       .eq('analysis_status', 'completed')
       .order('uploaded_at', { ascending: false })
       .then(({ data }) => {
-        setContratos((data as ContratoOption[]) ?? [])
+        setContratos((data as unknown as ContratoOption[]) ?? [])
         setLoadingContratos(false)
       })
   }, [tipo, companyId])
