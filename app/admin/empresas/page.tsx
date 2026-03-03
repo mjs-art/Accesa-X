@@ -69,7 +69,7 @@ export default function AdminEmpresasPage() {
       `)
       .order('created_at', { ascending: false })
 
-    setCompanies((data as Company[]) ?? [])
+    setCompanies((data as unknown as Company[]) ?? [])
     setLoading(false)
   }
 

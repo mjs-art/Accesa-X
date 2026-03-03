@@ -64,7 +64,7 @@ export default function AdminPage() {
       .select('id, tipo_credito, monto_solicitado, plazo_meses, status, created_at, companies(nombre_razon_social, rfc)')
       .order('created_at', { ascending: false })
 
-    setApplications((data as Application[]) ?? [])
+    setApplications((data as unknown as Application[]) ?? [])
     setLoading(false)
   }
 
