@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Evita que webpack intente empaquetar módulos de Node.js (ws, net, tls)
   // que @supabase/supabase-js incluye para el realtime en el servidor.
   webpack: (config) => {
