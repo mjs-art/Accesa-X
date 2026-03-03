@@ -28,6 +28,7 @@ export default function VerificacionFiscalPage() {
   const [loadingCompany, setLoadingCompany] = useState(true)
 
   // Cargar la empresa del usuario al montar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function fetchCompany() {
       const { data: { user } } = await supabase.auth.getUser()

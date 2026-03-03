@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import {
-  AlertTriangle, ArrowLeft, Calendar, CheckCircle2, Clock,
+  AlertTriangle, ArrowLeft, CheckCircle2, Clock,
   DollarSign, Download, FileText, Loader2, TrendingUp,
 } from 'lucide-react'
 
@@ -118,6 +118,7 @@ export default function AdminSolicitudPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [approveOpen, setApproveOpen] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { init() }, [id])
 
   async function init() {

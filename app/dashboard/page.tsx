@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
 import { FileText, Users, DollarSign, CheckCircle2, ChevronRight } from 'lucide-react'
 
 // TODO: Reemplazar con datos reales de Syntage una vez que el API key esté activo
@@ -79,7 +78,6 @@ function formatDate(dateStr: string) {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { toast } = useToast()
 
   return (
     <div>

@@ -56,6 +56,7 @@ export default function AdminEmpresasPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {

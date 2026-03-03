@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -14,12 +14,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import {
   ArrowLeft,
@@ -30,10 +24,6 @@ import {
   Clock,
   AlertCircle,
   Eye,
-  Calendar,
-  DollarSign,
-  AlertTriangle,
-  TrendingUp,
 } from 'lucide-react'
 
 // TODO: Reemplazar con datos reales de Syntage cuando el API key esté activo
@@ -84,166 +74,6 @@ function StatusBadge({ status }: { status: Contrato['analysis_status'] }) {
   )
 }
 
-// ── Nivel de riesgo ───────────────────────────────────────────────────────────
-function RiesgoBadge({ nivel }: { nivel: 'alto' | 'medio' | 'bajo' }) {
-  const map = {
-    alto: 'bg-red-100 text-red-700 border-red-200',
-    medio: 'bg-amber-100 text-amber-700 border-amber-200',
-    bajo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  }
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${map[nivel]}`}>
-      {nivel.charAt(0).toUpperCase() + nivel.slice(1)}
-    </span>
-  )
-}
-
-// ── Modal de análisis ─────────────────────────────────────────────────────────
-function AnalysisModal({
-  open,
-  onClose,
-  contrato,
-}: {
-  open: boolean
-  onClose: () => void
-  contrato: Contrato | null
-}) {
-  const r = contrato?.analysis_result
-  if (!r) return null
-
-  const formatMXN = (n: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: r.moneda || 'MXN', maximumFractionDigits: 0 }).format(n)
-
-  const viabilidadColor =
-    r.viabilidad_score >= 70 ? 'bg-[#00C896]' : r.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-[#0F2D5E] text-lg">
-            Análisis del contrato
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5 pt-2">
-
-          {/* Resumen */}
-          <section>
-            <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Resumen</h3>
-            <p className="text-sm text-[#0F172A] leading-relaxed bg-slate-50 rounded-lg p-3">
-              {r.resumen}
-            </p>
-          </section>
-
-          {/* Datos clave */}
-          <section className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-              <DollarSign className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-[#64748B]">Monto total</p>
-                <p className="text-sm font-semibold text-[#0F172A]">
-                  {r.monto_total ? formatMXN(r.monto_total) : '—'}
-                </p>
-              </div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-              <FileText className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-[#64748B]">Cliente</p>
-                <p className="text-sm font-semibold text-[#0F172A]">{r.cliente_nombre || '—'}</p>
-              </div>
-            </div>
-            {r.fecha_inicio && (
-              <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                <Calendar className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-[#64748B]">Inicio</p>
-                  <p className="text-sm font-semibold text-[#0F172A]">{r.fecha_inicio}</p>
-                </div>
-              </div>
-            )}
-            {r.fecha_fin && (
-              <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                <Calendar className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-[#64748B]">Vencimiento</p>
-                  <p className="text-sm font-semibold text-[#0F172A]">{r.fecha_fin}</p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Fechas de pago */}
-          {r.fechas_pago?.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Fechas de pago</h3>
-              <div className="flex flex-wrap gap-2">
-                {r.fechas_pago.map((f, i) => (
-                  <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1">
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Entregables */}
-          {r.entregables?.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Entregables</h3>
-              <ul className="space-y-1.5">
-                {r.entregables.map((e, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-[#0F172A]">
-                    <CheckCircle2 className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
-                    {e}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Riesgos */}
-          {r.riesgos?.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Riesgos identificados</h3>
-              <ul className="space-y-2">
-                {r.riesgos.map((riesgo, i) => (
-                  <li key={i} className="flex items-start gap-2.5 bg-slate-50 rounded-lg p-3">
-                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#0F172A]">{riesgo.descripcion}</p>
-                    </div>
-                    <RiesgoBadge nivel={riesgo.nivel} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Score de viabilidad */}
-          <section className="bg-slate-50 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-[#0F2D5E]" />
-                <h3 className="text-sm font-semibold text-[#0F172A]">Score de viabilidad</h3>
-              </div>
-              <span className="text-2xl font-bold text-[#0F2D5E]">{r.viabilidad_score}<span className="text-sm text-[#64748B] font-normal">/100</span></span>
-            </div>
-            <div className="h-3 bg-slate-200 rounded-full overflow-hidden mb-2">
-              <div
-                className={`h-full rounded-full transition-all ${viabilidadColor}`}
-                style={{ width: `${r.viabilidad_score}%` }}
-              />
-            </div>
-            <p className="text-xs text-[#64748B] leading-relaxed">{r.viabilidad_razon}</p>
-          </section>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('es-MX', {
@@ -271,6 +101,7 @@ export default function ClientePage() {
   const [dragOver, setDragOver] = useState(false)
   const [analyzing, setAnalyzing] = useState<string | null>(null)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchContratos() }, [id])
 
   async function fetchContratos() {
@@ -386,6 +217,7 @@ export default function ClientePage() {
     if (error) {
       let errorDetail = error.message ?? 'Error desconocido'
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const body = await (error as any).context?.json()
         errorDetail = body?.error ?? errorDetail
       } catch {}
@@ -401,12 +233,12 @@ export default function ClientePage() {
     }
   }
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files[0]
     if (file) uploadFile(file)
-  }, [cliente, id])
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

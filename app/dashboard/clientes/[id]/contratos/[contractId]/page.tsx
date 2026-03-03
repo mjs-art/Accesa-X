@@ -84,6 +84,7 @@ export default function ContratoPage() {
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchContract() }, [contractId])
 
   useEffect(() => {
