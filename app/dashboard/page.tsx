@@ -33,6 +33,7 @@ import {
   RefreshCw,
   LogOut,
   User,
+  Bug,
 } from 'lucide-react'
 
 interface Company {
@@ -208,6 +209,11 @@ export default function DashboardPage() {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuItem onClick={() => router.push('/dashboard/debug')}>
+                  <Bug className="mr-2 h-4 w-4 text-slate-400" />
+                  <span className="text-slate-500">Debug</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-red-600 focus:text-red-600 focus:bg-red-50"
