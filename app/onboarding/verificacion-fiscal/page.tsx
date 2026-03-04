@@ -24,7 +24,7 @@ export default function VerificacionFiscalPage() {
   const [ciec, setCiec] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [razonSocial, setRazonSocial] = useState<string | null>(null)
+  const [razonSocial] = useState<string | null>(null)
   const [loadingCompany, setLoadingCompany] = useState(true)
 
   // Cargar la empresa del usuario al montar
@@ -70,7 +70,6 @@ export default function VerificacionFiscalPage() {
     }
 
     if (data?.success && data?.status === 'valid') {
-      setRazonSocial(data.razon_social ?? company.nombre_razon_social)
       setEstado('success')
     } else if (data?.status === 'invalid') {
       setEstado('error')
@@ -186,6 +185,16 @@ export default function VerificacionFiscalPage() {
                 <ShieldCheck className="mr-2 h-4 w-4" />
               )}
               Conectar con el SAT
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+              disabled={estado === 'loading'}
+              onClick={() => router.push('/dashboard')}
+            >
+              Saltar verificación por ahora
             </Button>
           </form>
         )}
