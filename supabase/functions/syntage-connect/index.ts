@@ -6,18 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Env vars inyectadas automáticamente por Supabase + los secrets que configures
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SYNTAGE_API_KEY = Deno.env.get('SYNTAGE_API_KEY')!
-const SYNTAGE_BASE_URL = Deno.env.get('SYNTAGE_BASE_URL')!
+const SYNTAGE_BASE_URL = Deno.env.get('SYNTAGE_BASE_URL')! // https://api.syntage.com o https://api.sandbox.syntage.com
 
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_ATTEMPTS = 10 // 30 segundos máximo
 
+// Syntage usa X-API-Key, no Bearer token
+const syntageHeaders = {
+  'X-API-Key': SYNTAGE_API_KEY,
+  'Content-Type': 'application/json',
+}
+
 serve(async (req) => {
-  // Preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -29,7 +33,6 @@ serve(async (req) => {
       return jsonError('Unauthorized', 401)
     }
 
-    // Cliente con JWT del usuario para verificar identidad
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     })
@@ -38,7 +41,6 @@ serve(async (req) => {
       return jsonError('Unauthorized', 401)
     }
 
-    // Cliente service role para operaciones de DB sin restricción de RLS
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     // 2. Parsear y validar body
@@ -60,13 +62,11 @@ serve(async (req) => {
     }
 
     // 4. Crear credencial en Syntage
+    // POST /credentials — requiere type: "ciec" (o "efirma")
     const credentialRes = await fetch(`${SYNTAGE_BASE_URL}/credentials`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SYNTAGE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rfc, password: ciec }),
+      headers: syntageHeaders,
+      body: JSON.stringify({ type: 'ciec', rfc, password: ciec }),
     })
 
     if (!credentialRes.ok) {
@@ -74,18 +74,31 @@ serve(async (req) => {
       return jsonError(`Error al conectar con SAT: ${errText}`, 400)
     }
 
-    const { id: credential_id } = await credentialRes.json()
+    const credentialData = await credentialRes.json()
+    const credential_id: string = credentialData.id
 
-    // 5. Polling hasta que el status sea definitivo (max 30s)
+    // 5. Resolver entity UUID por RFC (credential_id ≠ entity_id en Syntage)
+    let entity_id = credential_id // fallback
+    const entityRes = await fetch(
+      `${SYNTAGE_BASE_URL}/entities?taxpayer.id=${encodeURIComponent(company.rfc)}`,
+      { headers: { 'X-API-Key': SYNTAGE_API_KEY } }
+    )
+    if (entityRes.ok) {
+      const entityData = await entityRes.json()
+      const entities = entityData['hydra:member'] ?? []
+      if (entities.length > 0) entity_id = entities[0].id
+    }
+    const entity_iri = `/entities/${entity_id}`
+
+    // 6. Polling hasta que el status sea definitivo (max 30s)
     let status = 'pending'
-    let razon_social: string | null = null
     let rawResponse: Record<string, unknown> | null = null
 
     for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
       await delay(POLL_INTERVAL_MS)
 
       const pollRes = await fetch(`${SYNTAGE_BASE_URL}/credentials/${credential_id}`, {
-        headers: { 'Authorization': `Bearer ${SYNTAGE_API_KEY}` },
+        headers: { 'X-API-Key': SYNTAGE_API_KEY },
       })
 
       if (!pollRes.ok) {
@@ -97,55 +110,50 @@ serve(async (req) => {
       rawResponse = data
       status = data.status ?? 'pending'
 
-      if (status === 'valid') {
-        razon_social = data.razon_social ?? data.name ?? null
-        break
-      }
-
-      if (status === 'invalid' || status === 'error') {
+      if (status === 'valid' || status === 'invalid' || status === 'error' || status === 'deactivated') {
         break
       }
     }
 
-    // Si sigue en pending tras el máximo de intentos, marcarlo como timeout
     if (status === 'pending') {
       status = 'error'
     }
 
-    // 6. Actualizar companies en DB
+    // 7. Actualizar companies en DB — guardar entity_id (no credential_id)
     await adminClient
       .from('companies')
       .update({
-        credential_id,
-        syntage_validated_at: new Date().toISOString(),
+        credential_id: entity_id,
+        syntage_validated_at: status === 'valid' ? new Date().toISOString() : null,
         syntage_raw_response: rawResponse,
       })
       .eq('id', company_id)
 
-    // 7. Si válido, disparar extracciones CFDI y declaraciones
+    // 8. Si válido, disparar extracciones CFDI y declaraciones
+    // POST /extractions — usa entity IRI y nombre de extractor correcto
     if (status === 'valid') {
       await Promise.all([
         fetch(`${SYNTAGE_BASE_URL}/extractions`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${SYNTAGE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ credential_id, type: 'cfdi' }),
+          headers: syntageHeaders,
+          body: JSON.stringify({
+            entity: entity_iri,
+            extractor: 'invoice', // CFDI emitidos y recibidos
+          }),
         }),
         fetch(`${SYNTAGE_BASE_URL}/extractions`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${SYNTAGE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ credential_id, type: 'declarations' }),
+          headers: syntageHeaders,
+          body: JSON.stringify({
+            entity: entity_iri,
+            extractor: 'annual_tax_return', // Declaraciones anuales
+          }),
         }),
       ])
     }
 
     return new Response(
-      JSON.stringify({ success: status === 'valid', status, credential_id, razon_social }),
+      JSON.stringify({ success: status === 'valid', status, credential_id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
@@ -154,7 +162,6 @@ serve(async (req) => {
   }
 })
 
-// Helpers
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

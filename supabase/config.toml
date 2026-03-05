@@ -1,0 +1,17 @@
+[functions.syntage-connect]
+verify_jwt = false
+
+[functions.get-dashboard-data]
+verify_jwt = false
+
+[functions.sync-sat-data]
+verify_jwt = false
+
+[functions.debug-reset-syntage]
+verify_jwt = false
+
+[functions.analyze-contract]
+verify_jwt = false
+
+[functions.ask-contract]
+verify_jwt = false

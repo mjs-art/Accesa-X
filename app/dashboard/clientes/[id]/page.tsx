@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,13 +26,6 @@ import {
   Eye,
 } from 'lucide-react'
 
-// TODO: Reemplazar con datos reales de Syntage cuando el API key esté activo
-const MOCK_CLIENTES: Record<string, { nombre: string }> = {
-  '1': { nombre: 'Constructora Norteña SA' },
-  '2': { nombre: 'Logística del Bajío SC' },
-  '3': { nombre: 'Distribuidora Pacífico' },
-  '4': { nombre: 'Servicios Industriales MX' },
-}
 
 interface AnalysisResult {
   resumen: string
@@ -89,11 +82,13 @@ function getFileName(path: string) {
 export default function ClientePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const cliente = MOCK_CLIENTES[id]
+  const rfc = decodeURIComponent(id)
+  const clienteNombre = searchParams.get('nombre') ?? rfc
 
   const [contratos, setContratos] = useState<Contrato[]>([])
   const [loadingContratos, setLoadingContratos] = useState(true)
@@ -123,7 +118,7 @@ export default function ClientePage() {
       .from('contracts')
       .select('id, nombre_cliente, storage_path, analysis_status, analysis_result, uploaded_at')
       .eq('company_id', company.id)
-      .eq('nombre_cliente', cliente?.nombre ?? '')
+      .eq('nombre_cliente', clienteNombre)
       .order('uploaded_at', { ascending: false })
 
     setContratos((data as unknown as Contrato[]) ?? [])
@@ -175,7 +170,7 @@ export default function ClientePage() {
       .from('contracts')
       .insert({
         company_id: company.id,
-        nombre_cliente: cliente?.nombre ?? `Cliente ${id}`,
+        nombre_cliente: clienteNombre,
         storage_path: storagePath,
         analysis_status: 'pending',
       })
@@ -246,17 +241,6 @@ export default function ClientePage() {
     e.target.value = ''
   }
 
-  if (!cliente) {
-    return (
-      <div className="max-w-4xl mx-auto px-6 py-12 text-center">
-        <p className="text-[#64748B]">Cliente no encontrado.</p>
-        <Button variant="ghost" onClick={() => router.push('/dashboard')} className="mt-4">
-          Volver al dashboard
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div>
 
@@ -293,7 +277,7 @@ export default function ClientePage() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
 
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">{cliente.nombre}</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">{clienteNombre}</h1>
           <p className="text-sm text-[#64748B] mt-0.5">Contratos y documentos</p>
         </div>
 
