@@ -44,19 +44,12 @@ export const legalRepSchema = z
       }
     }
 
-    if (data.esElUsuario) {
-      // When user IS the legal rep, all personal fields are required
-      requireName('nombres', data.nombres, 'Nombre')
-      requireName('apellidoPaterno', data.apellidoPaterno, 'Apellido paterno')
-      requireField('curp', data.curp, 'CURP')
-      requireField('rfcPersonal', data.rfcPersonal, 'RFC personal')
-      requireField('email', data.email, 'Correo electrónico')
-      requireField('telefono', data.telefono, 'Teléfono')
-    } else {
-      // When a third party is the legal rep, at least their name is required
-      requireName('nombres', data.nombres, 'Nombre')
-      requireName('apellidoPaterno', data.apellidoPaterno, 'Apellido paterno')
-    }
+    // These fields are always required regardless of esElUsuario
+    requireName('nombres', data.nombres, 'Nombre')
+    requireName('apellidoPaterno', data.apellidoPaterno, 'Apellido paterno')
+    requireField('curp', data.curp, 'CURP')
+    requireField('rfcPersonal', data.rfcPersonal, 'RFC personal')
+    requireField('email', data.email, 'Correo electrónico')
   })
 
 export type LegalRepFormData = z.infer<typeof legalRepSchema>

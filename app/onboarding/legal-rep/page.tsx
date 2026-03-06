@@ -199,7 +199,7 @@ function LegalRepPageInner() {
             {/* Nombres */}
             <div className="space-y-1.5">
               <Label htmlFor="nombres" className="text-sm font-medium text-[#0F172A]">
-                Nombre(s){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+                Nombre(s)<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
                 id="nombres"
@@ -217,7 +217,7 @@ function LegalRepPageInner() {
             {/* Apellido paterno */}
             <div className="space-y-1.5">
               <Label htmlFor="apellidoPaterno" className="text-sm font-medium text-[#0F172A]">
-                Apellido paterno{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+                Apellido paterno<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
                 id="apellidoPaterno"
@@ -250,7 +250,7 @@ function LegalRepPageInner() {
             {/* Teléfono */}
             <div className="space-y-1.5">
               <Label htmlFor="telefono" className="text-sm font-medium text-[#0F172A]">
-                Teléfono (10 dígitos){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+                Teléfono (10 dígitos)
               </Label>
               <Input
                 id="telefono"
@@ -270,7 +270,7 @@ function LegalRepPageInner() {
             {/* CURP */}
             <div className="space-y-1.5">
               <Label htmlFor="curp" className="text-sm font-medium text-[#0F172A]">
-                CURP{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+                CURP<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
                 id="curp"
@@ -289,7 +289,7 @@ function LegalRepPageInner() {
             {/* RFC personal */}
             <div className="space-y-1.5">
               <Label htmlFor="rfcPersonal" className="text-sm font-medium text-[#0F172A]">
-                RFC (persona física){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+                RFC (persona física)<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
                 id="rfcPersonal"
@@ -309,7 +309,7 @@ function LegalRepPageInner() {
           {/* Email */}
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-sm font-medium text-[#0F172A]">
-              Correo electrónico{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              Correo electrónico<span className="text-red-500 ml-0.5">*</span>
             </Label>
             <Input
               id="email"
