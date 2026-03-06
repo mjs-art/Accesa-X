@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { OnboardingStep } from '@/features/onboarding/types/onboarding.types'
 
 /**
  * Route Handler para el redirect de OAuth (Google) y magic links.
@@ -11,6 +12,18 @@ import { createClient } from '@/lib/supabase/server'
  *   → http://localhost:3000/auth/callback  (desarrollo)
  *   → https://tu-dominio.com/auth/callback (producción)
  */
+
+const STEP_PATHS: Record<OnboardingStep, string> = {
+  'empresa':             '/onboarding/empresa',
+  'verificacion-fiscal': '/onboarding/verificacion-fiscal',
+  'legal-rep':           '/onboarding/legal-rep',
+  'legal-rep-docs':      '/onboarding/legal-rep-docs',
+  'shareholders':        '/onboarding/shareholders',
+  'company-docs':        '/onboarding/company-docs',
+  'confirmation':        '/onboarding/confirmation',
+  'completed':           '/dashboard',
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -22,20 +35,29 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       // Si el next ya viene especificado en la URL, respetarlo
-      // Si no, detectar si el usuario ya tiene empresa y redirigir correctamente
       if (next !== '/dashboard' && next !== '/onboarding/empresa') {
         return NextResponse.redirect(`${origin}${next}`)
       }
 
+      // Detectar en qué paso del onboarding está el usuario
       const { data: company } = await supabase
         .from('companies')
-        .select('id')
+        .select('id, onboarding_completed, onboarding_step')
         .eq('user_id', data.user.id)
         .limit(1)
         .single()
 
-      const destination = company ? '/dashboard' : '/onboarding/empresa'
-      return NextResponse.redirect(`${origin}${destination}`)
+      if (!company) {
+        return NextResponse.redirect(`${origin}/onboarding/empresa`)
+      }
+
+      if (company.onboarding_completed) {
+        return NextResponse.redirect(`${origin}/dashboard`)
+      }
+
+      const step = (company.onboarding_step as OnboardingStep) ?? 'empresa'
+      const stepPath = STEP_PATHS[step] ?? '/onboarding/empresa'
+      return NextResponse.redirect(`${origin}${stepPath}`)
     }
   }
 

@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { SupabaseAdminRepository } from '@/features/admin/repositories/admin.repository.impl'
+import { AdminService } from '@/features/admin/services/admin.service'
+import type { CreditApplication } from '@/features/admin/types/admin.types'
 import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -10,20 +13,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Loader2, Search } from 'lucide-react'
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface Application {
-  id: string
-  tipo_credito: 'empresarial' | 'factoraje' | 'contrato'
-  monto_solicitado: number
-  plazo_meses: number
-  status: string
-  created_at: string
-  companies: { nombre_razon_social: string; rfc: string } | null
-}
-
-// ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
   submitted:   { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  under_review: { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
   en_revision: { label: 'Revisando',   classes: 'bg-blue-50 text-blue-700 border-blue-200' },
   aprobado:    { label: 'Aprobado',    classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   rechazado:   { label: 'Rechazado',   classes: 'bg-red-50 text-red-700 border-red-200' },
@@ -43,12 +35,11 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-// ── Página ─────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [applications, setApplications] = useState<Application[]>([])
+  const [applications, setApplications] = useState<CreditApplication[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -59,12 +50,10 @@ export default function AdminPage() {
 
   async function fetchAll() {
     setLoading(true)
-    const { data } = await supabase
-      .from('credit_applications')
-      .select('id, tipo_credito, monto_solicitado, plazo_meses, status, created_at, companies(nombre_razon_social, rfc)')
-      .order('created_at', { ascending: false })
-
-    setApplications((data as unknown as Application[]) ?? [])
+    const repo = new SupabaseAdminRepository(supabase)
+    const service = new AdminService(repo)
+    const data = await service.getApplications()
+    setApplications(data)
     setLoading(false)
   }
 
@@ -72,10 +61,10 @@ export default function AdminPage() {
     const q = search.toLowerCase()
     const matchSearch =
       !q ||
-      a.companies?.nombre_razon_social.toLowerCase().includes(q) ||
-      a.companies?.rfc.toLowerCase().includes(q)
+      a.company?.nombreRazonSocial.toLowerCase().includes(q) ||
+      a.company?.rfc.toLowerCase().includes(q)
     const matchStatus = !statusFilter || a.status === statusFilter
-    const matchTipo = !tipoFilter || a.tipo_credito === tipoFilter
+    const matchTipo = !tipoFilter || a.tipoCredito === tipoFilter
     return matchSearch && matchStatus && matchTipo
   })
 
@@ -159,12 +148,12 @@ export default function AdminPage() {
             <TableBody>
               {filtered.map((a) => {
                 const statusCfg = STATUS_CONFIG[a.status] ?? { label: a.status, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
-                const tipoCfg = TIPO_CONFIG[a.tipo_credito] ?? { label: a.tipo_credito, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
+                const tipoCfg = TIPO_CONFIG[a.tipoCredito] ?? { label: a.tipoCredito, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
                 return (
                   <TableRow key={a.id} className="hover:bg-slate-50/60">
                     <TableCell className="pl-6">
-                      <p className="text-sm font-medium text-[#0F172A]">{a.companies?.nombre_razon_social ?? '—'}</p>
-                      <p className="text-xs text-[#64748B] font-mono">{a.companies?.rfc ?? '—'}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{a.company?.nombreRazonSocial ?? '—'}</p>
+                      <p className="text-xs text-[#64748B] font-mono">{a.company?.rfc ?? '—'}</p>
                     </TableCell>
                     <TableCell>
                       <Badge className={`${tipoCfg.classes} border text-xs px-2 py-0.5 font-medium`}>
@@ -172,15 +161,15 @@ export default function AdminPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm font-semibold text-[#0F172A]">
-                      {formatMXN(a.monto_solicitado)}
+                      {formatMXN(a.montoSolicitado)}
                     </TableCell>
-                    <TableCell className="text-sm text-[#64748B]">{a.plazo_meses} meses</TableCell>
+                    <TableCell className="text-sm text-[#64748B]">{a.plazoMeses} meses</TableCell>
                     <TableCell>
                       <Badge className={`${statusCfg.classes} border text-xs px-2 py-0.5 font-medium`}>
                         {statusCfg.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-[#64748B]">{formatDate(a.created_at)}</TableCell>
+                    <TableCell className="text-sm text-[#64748B]">{formatDate(a.createdAt)}</TableCell>
                     <TableCell className="pr-6">
                       <Button
                         variant="ghost"

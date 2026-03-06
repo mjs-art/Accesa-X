@@ -2,6 +2,18 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { OnboardingStep } from '@/features/onboarding/types/onboarding.types'
+
+const STEP_PATHS: Record<OnboardingStep, string> = {
+  'empresa':             '/onboarding/empresa',
+  'verificacion-fiscal': '/onboarding/verificacion-fiscal',
+  'legal-rep':           '/onboarding/legal-rep',
+  'legal-rep-docs':      '/onboarding/legal-rep-docs',
+  'shareholders':        '/onboarding/shareholders',
+  'company-docs':        '/onboarding/company-docs',
+  'confirmation':        '/onboarding/confirmation',
+  'completed':           '/dashboard',
+}
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -58,15 +70,25 @@ export default function AuthPage() {
       return
     }
 
-    // Si ya tiene empresa registrada → dashboard, si no → onboarding
     const { data: company } = await supabase
       .from('companies')
-      .select('id')
+      .select('onboarding_completed, onboarding_step')
       .eq('user_id', signInData.user.id)
       .limit(1)
       .single()
 
-    window.location.href = company ? '/dashboard' : '/onboarding/empresa'
+    if (!company) {
+      window.location.href = '/onboarding/empresa'
+      return
+    }
+
+    if (company.onboarding_completed) {
+      window.location.href = '/dashboard'
+      return
+    }
+
+    const step = (company.onboarding_step as OnboardingStep) ?? 'empresa'
+    window.location.href = STEP_PATHS[step] ?? '/onboarding/empresa'
   }
 
   async function handleRegister(e: React.FormEvent) {

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { advanceToStepAction } from '@/app/actions/onboarding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +18,13 @@ interface CompanyData {
 }
 
 export default function VerificacionFiscalPage() {
+  return <Suspense><VerificacionFiscalPageInner /></Suspense>
+}
+
+function VerificacionFiscalPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromPerfil = searchParams.get('from') === 'perfil'
   const supabase = createClient()
 
   const [company, setCompany] = useState<CompanyData | null>(null)
@@ -80,6 +87,13 @@ export default function VerificacionFiscalPage() {
     }
   }
 
+  async function handleSaltar() {
+    if (company) {
+      await advanceToStepAction(company.id, 'legal-rep')
+    }
+    router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
+  }
+
   function handleReintentar() {
     setCiec('')
     setErrorMsg(null)
@@ -96,19 +110,20 @@ export default function VerificacionFiscalPage() {
 
   return (
     <>
-      {/* Progress indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[#0F2D5E]">Paso 2 de 3</span>
-          <span className="text-sm text-[#64748B]">Verificación fiscal</span>
+      {!fromPerfil && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[#0F2D5E]">Paso 2 de 7</span>
+            <span className="text-sm text-[#64748B]">Verificación fiscal</span>
+          </div>
+          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-[#00C896] transition-all"
+              style={{ width: '28%' }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[#00C896] transition-all"
-            style={{ width: '66%' }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -192,7 +207,7 @@ export default function VerificacionFiscalPage() {
               variant="ghost"
               className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
               disabled={estado === 'loading'}
-              onClick={() => router.push('/dashboard')}
+              onClick={handleSaltar}
             >
               Saltar verificación por ahora
             </Button>
@@ -220,7 +235,10 @@ export default function VerificacionFiscalPage() {
             </div>
 
             <Button
-              onClick={() => router.push('/onboarding/contratos')}
+              onClick={async () => {
+                if (company) await advanceToStepAction(company.id, 'legal-rep')
+                router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
+              }}
               className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
             >
               Continuar
