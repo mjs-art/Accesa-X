@@ -2,10 +2,11 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { saveLegalRepAction, getOnboardingStateAction } from '@/app/actions/onboarding'
+import { saveLegalRepAction, getOnboardingStateAction, getLegalRepAction } from '@/app/actions/onboarding'
 import { sendInvitationAction } from '@/app/actions/send-invitation'
 import { legalRepSchema } from '@/features/onboarding/schemas/legal-rep.schema'
 import type { LegalRepFormData } from '@/features/onboarding/schemas/legal-rep.schema'
+import type { LegalRepresentative } from '@/features/onboarding/types/onboarding.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,6 +25,8 @@ function LegalRepPageInner() {
 
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [loadingCompany, setLoadingCompany] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [savedLegalRep, setSavedLegalRep] = useState<LegalRepresentative | null>(null)
 
   const [form, setForm] = useState<LegalRepFormData>({
     esElUsuario: false,
@@ -40,18 +43,56 @@ function LegalRepPageInner() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getOnboardingStateAction().then((result) => {
+    getOnboardingStateAction().then(async (result) => {
       if (result.error || !result.company) {
         router.push('/onboarding/empresa')
         return
       }
-      setCompanyId(result.company.id)
+      const id = result.company.id
+      setCompanyId(id)
+      setUserEmail(result.userEmail ?? null)
+
+      // Load existing legal rep data for autocomplete
+      const legalRepResult = await getLegalRepAction(id)
+      if (legalRepResult.success && legalRepResult.legalRep) {
+        const lr = legalRepResult.legalRep
+        setSavedLegalRep(lr)
+        // Pre-fill form if data already exists
+        setForm({
+          esElUsuario: lr.esElUsuario,
+          nombres: lr.nombres ?? '',
+          apellidoPaterno: lr.apellidoPaterno ?? '',
+          apellidoMaterno: lr.apellidoMaterno ?? '',
+          curp: lr.curp ?? '',
+          rfcPersonal: lr.rfcPersonal ?? '',
+          email: lr.email ?? '',
+          telefono: lr.telefono ? lr.telefono.replace(/^\+52/, '') : '',
+        })
+      }
+
       setLoadingCompany(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleChange(field: keyof LegalRepFormData, value: string | boolean) {
+    if (field === 'esElUsuario' && value === true) {
+      // Auto-fill with saved data + user email when user marks themselves as the legal rep
+      setForm((prev) => ({
+        ...prev,
+        esElUsuario: true,
+        nombres: prev.nombres || savedLegalRep?.nombres || '',
+        apellidoPaterno: prev.apellidoPaterno || savedLegalRep?.apellidoPaterno || '',
+        apellidoMaterno: prev.apellidoMaterno || savedLegalRep?.apellidoMaterno || '',
+        curp: prev.curp || savedLegalRep?.curp || '',
+        rfcPersonal: prev.rfcPersonal || savedLegalRep?.rfcPersonal || '',
+        email: prev.email || userEmail || savedLegalRep?.email || '',
+        telefono: prev.telefono || (savedLegalRep?.telefono ? savedLegalRep.telefono.replace(/^\+52/, '') : ''),
+      }))
+      setFieldErrors({})
+      setError(null)
+      return
+    }
     setForm((prev) => ({ ...prev, [field]: value }))
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
     setError(null)
@@ -140,7 +181,9 @@ function LegalRepPageInner() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Nombres */}
             <div className="space-y-1.5">
-              <Label htmlFor="nombres" className="text-sm font-medium text-[#0F172A]">Nombre(s)</Label>
+              <Label htmlFor="nombres" className="text-sm font-medium text-[#0F172A]">
+                Nombre(s){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
               <Input
                 id="nombres"
                 placeholder="Ej. María Guadalupe"
@@ -156,7 +199,9 @@ function LegalRepPageInner() {
 
             {/* Apellido paterno */}
             <div className="space-y-1.5">
-              <Label htmlFor="apellidoPaterno" className="text-sm font-medium text-[#0F172A]">Apellido paterno</Label>
+              <Label htmlFor="apellidoPaterno" className="text-sm font-medium text-[#0F172A]">
+                Apellido paterno{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
               <Input
                 id="apellidoPaterno"
                 placeholder="Ej. González"
@@ -172,7 +217,9 @@ function LegalRepPageInner() {
 
             {/* Apellido materno */}
             <div className="space-y-1.5">
-              <Label htmlFor="apellidoMaterno" className="text-sm font-medium text-[#0F172A]">Apellido materno</Label>
+              <Label htmlFor="apellidoMaterno" className="text-sm font-medium text-[#0F172A]">
+                Apellido materno
+              </Label>
               <Input
                 id="apellidoMaterno"
                 placeholder="Ej. López"
@@ -185,7 +232,9 @@ function LegalRepPageInner() {
 
             {/* Teléfono */}
             <div className="space-y-1.5">
-              <Label htmlFor="telefono" className="text-sm font-medium text-[#0F172A]">Teléfono (10 dígitos)</Label>
+              <Label htmlFor="telefono" className="text-sm font-medium text-[#0F172A]">
+                Teléfono (10 dígitos){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
               <Input
                 id="telefono"
                 type="tel"
@@ -203,7 +252,9 @@ function LegalRepPageInner() {
 
             {/* CURP */}
             <div className="space-y-1.5">
-              <Label htmlFor="curp" className="text-sm font-medium text-[#0F172A]">CURP</Label>
+              <Label htmlFor="curp" className="text-sm font-medium text-[#0F172A]">
+                CURP{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
               <Input
                 id="curp"
                 placeholder="18 caracteres"
@@ -220,7 +271,9 @@ function LegalRepPageInner() {
 
             {/* RFC personal */}
             <div className="space-y-1.5">
-              <Label htmlFor="rfcPersonal" className="text-sm font-medium text-[#0F172A]">RFC (persona física)</Label>
+              <Label htmlFor="rfcPersonal" className="text-sm font-medium text-[#0F172A]">
+                RFC (persona física){form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
               <Input
                 id="rfcPersonal"
                 placeholder="13 caracteres"
@@ -238,7 +291,9 @@ function LegalRepPageInner() {
 
           {/* Email */}
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-sm font-medium text-[#0F172A]">Correo electrónico</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-[#0F172A]">
+              Correo electrónico{form.esElUsuario && <span className="text-red-500 ml-0.5">*</span>}
+            </Label>
             <Input
               id="email"
               type="email"

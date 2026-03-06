@@ -198,7 +198,7 @@ export async function getOnboardingStateAction() {
 
   const service = buildService(supabase)
   const company = await service.getCompany(user.id)
-  return { success: true, company }
+  return { success: true, company, userEmail: user.email ?? null }
 }
 
 export async function getProfileDataAction() {

@@ -33,22 +33,29 @@ export const legalRepSchema = z
       .or(z.literal('')),
   })
   .superRefine((data, ctx) => {
-    // When the logged-in user is NOT the legal rep, name fields are required
-    if (!data.esElUsuario) {
-      if (!data.nombres || data.nombres.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ingresa el nombre (mínimo 2 caracteres)',
-          path: ['nombres'],
-        })
+    function requireName(field: 'nombres' | 'apellidoPaterno', value: string | undefined, label: string) {
+      if (!value || value.trim().length < 2) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} es requerido (mínimo 2 caracteres)`, path: [field] })
       }
-      if (!data.apellidoPaterno || data.apellidoPaterno.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ingresa el apellido paterno (mínimo 2 caracteres)',
-          path: ['apellidoPaterno'],
-        })
+    }
+    function requireField(field: keyof typeof data, value: string | undefined, label: string) {
+      if (!value || value.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} es requerido`, path: [field] })
       }
+    }
+
+    if (data.esElUsuario) {
+      // When user IS the legal rep, all personal fields are required
+      requireName('nombres', data.nombres, 'Nombre')
+      requireName('apellidoPaterno', data.apellidoPaterno, 'Apellido paterno')
+      requireField('curp', data.curp, 'CURP')
+      requireField('rfcPersonal', data.rfcPersonal, 'RFC personal')
+      requireField('email', data.email, 'Correo electrónico')
+      requireField('telefono', data.telefono, 'Teléfono')
+    } else {
+      // When a third party is the legal rep, at least their name is required
+      requireName('nombres', data.nombres, 'Nombre')
+      requireName('apellidoPaterno', data.apellidoPaterno, 'Apellido paterno')
     }
   })
 
