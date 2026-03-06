@@ -68,6 +68,41 @@ export class SupabaseDocumentRepository implements IDocumentRepository {
     return this.toCompanyDocDomain(data as Record<string, unknown>)
   }
 
+  async upsertCompanyDoc(input: CreateCompanyDocInput): Promise<CompanyDocument> {
+    const { data: existing } = await this.supabase
+      .from('company_documents')
+      .select('id')
+      .eq('company_id', input.companyId)
+      .eq('document_type', input.documentType)
+      .limit(1)
+      .single()
+
+    const fields = {
+      file_url: input.fileUrl,
+      storage_path: input.storagePath,
+      status: 'uploaded',
+    }
+
+    if (existing) {
+      const { data, error } = await this.supabase
+        .from('company_documents')
+        .update(fields)
+        .eq('id', existing.id)
+        .select()
+        .single()
+      if (error) throw new Error(error.message)
+      return this.toCompanyDocDomain(data as Record<string, unknown>)
+    } else {
+      const { data, error } = await this.supabase
+        .from('company_documents')
+        .insert({ company_id: input.companyId, document_type: input.documentType, ...fields })
+        .select()
+        .single()
+      if (error) throw new Error(error.message)
+      return this.toCompanyDocDomain(data as Record<string, unknown>)
+    }
+  }
+
   async getCompanyDocs(companyId: string): Promise<CompanyDocument[]> {
     const { data, error } = await this.supabase
       .from('company_documents')

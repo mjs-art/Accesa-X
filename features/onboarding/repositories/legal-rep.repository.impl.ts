@@ -39,6 +39,46 @@ export class SupabaseLegalRepRepository implements ILegalRepRepository {
     return this.toDomain(data as Record<string, unknown>)
   }
 
+  async upsert(input: CreateLegalRepInput): Promise<LegalRepresentative> {
+    const { data: existing } = await this.supabase
+      .from('legal_representatives')
+      .select('id')
+      .eq('company_id', input.companyId)
+      .limit(1)
+      .single()
+
+    const fields = {
+      es_el_usuario: input.esElUsuario,
+      nombres: input.nombres ?? null,
+      apellido_paterno: input.apellidoPaterno ?? null,
+      apellido_materno: input.apellidoMaterno ?? null,
+      curp: input.curp ?? null,
+      rfc_personal: input.rfcPersonal ?? null,
+      email: input.email ?? null,
+      telefono: input.telefono ? `+52${input.telefono}` : null,
+      telefono_verificado: input.telefonoVerificado ?? false,
+    }
+
+    if (existing) {
+      const { data, error } = await this.supabase
+        .from('legal_representatives')
+        .update(fields)
+        .eq('id', existing.id)
+        .select()
+        .single()
+      if (error) throw new Error(error.message)
+      return this.toDomain(data as Record<string, unknown>)
+    } else {
+      const { data, error } = await this.supabase
+        .from('legal_representatives')
+        .insert({ company_id: input.companyId, ...fields })
+        .select()
+        .single()
+      if (error) throw new Error(error.message)
+      return this.toDomain(data as Record<string, unknown>)
+    }
+  }
+
   async updateTelefonoVerificado(legalRepId: string, verified: boolean): Promise<void> {
     const { error } = await this.supabase
       .from('legal_representatives')

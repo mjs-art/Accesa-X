@@ -9,11 +9,18 @@ import type { CompanyFormData } from '../schemas/company.schema'
 import type { LegalRepFormData } from '../schemas/legal-rep.schema'
 import type { ShareholderFormData } from '../schemas/shareholder.schema'
 
+export const REQUIRED_COMPANY_DOC_TYPES = [
+  'acta_constitutiva',
+  'actas_asamblea',
+  'documento_poderes',
+  'estado_cuenta_bancario',
+] as const
+
 export interface OnboardingSummary {
   company: Company | null
   legalRepComplete: boolean
   shareholderCount: number
-  companyDocCount: number
+  uploadedDocTypes: string[]
   onboardingComplete: boolean
 }
 
@@ -51,7 +58,7 @@ export class OnboardingService {
   }
 
   async saveLegalRep(companyId: string, data: LegalRepFormData): Promise<LegalRepresentative> {
-    const legalRep = await this.legalRepRepo.create({
+    const legalRep = await this.legalRepRepo.upsert({
       companyId,
       esElUsuario: data.esElUsuario,
       nombres: data.nombres || undefined,
@@ -102,19 +109,27 @@ export class OnboardingService {
   async getSummary(userId: string): Promise<OnboardingSummary> {
     const company = await this.companyRepo.findByUserId(userId)
     if (!company) {
-      return { company: null, legalRepComplete: false, shareholderCount: 0, companyDocCount: 0, onboardingComplete: false }
+      return { company: null, legalRepComplete: false, shareholderCount: 0, uploadedDocTypes: [], onboardingComplete: false }
     }
-    const [legalRep, shareholderCount, companyDocCount] = await Promise.all([
+    const [legalRep, shareholderCount, companyDocs] = await Promise.all([
       this.legalRepRepo.findByCompanyId(company.id),
       this.shareholderRepo.countByCompanyId(company.id),
-      this.documentRepo.countCompanyDocs(company.id),
+      this.documentRepo.getCompanyDocs(company.id),
     ])
+    const legalRepComplete = !!(
+      legalRep &&
+      legalRep.nombres?.trim() &&
+      legalRep.apellidoPaterno?.trim() &&
+      legalRep.curp?.trim() &&
+      legalRep.rfcPersonal?.trim() &&
+      legalRep.email?.trim()
+    )
     return {
       company,
-      legalRepComplete: !!legalRep,
+      legalRepComplete,
       shareholderCount,
-      companyDocCount,
-      onboardingComplete: company.onboardingStep === 'complete',
+      uploadedDocTypes: companyDocs.map((d) => d.documentType),
+      onboardingComplete: company.onboardingStep === 'completed',
     }
   }
 

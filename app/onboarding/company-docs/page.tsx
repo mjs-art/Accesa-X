@@ -11,7 +11,7 @@ import {
 } from '@/app/actions/onboarding'
 import { Uploader } from '@/components/onboarding/uploader'
 import { Button } from '@/components/ui/button'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { Loader2, ChevronDown, CheckCircle2 } from 'lucide-react'
 import type { CompanyDocumentType } from '@/features/onboarding/types/onboarding.types'
 
 interface DocConfig {
@@ -200,7 +200,13 @@ function CompanyDocsPageInner() {
                 </button>
 
                 {isOpen && (
-                  <div className="px-8 pb-6 pt-1">
+                  <div className="px-8 pb-6 pt-1 space-y-3">
+                    {isDone && (
+                      <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        Documento ya cargado — sube uno nuevo para reemplazarlo
+                      </div>
+                    )}
                     <Uploader
                       label={`Sube tu ${doc.label.toLowerCase()}`}
                       accept="application/pdf,image/*"

@@ -12,6 +12,7 @@ import { SupabaseInvitationRepository } from '@/features/onboarding/repositories
 import { SupabaseDocumentRepository } from '@/features/onboarding/repositories/document.repository.impl'
 import { SupabaseCreditApplicationRepository } from '@/features/onboarding/repositories/credit-application.repository.impl'
 import type { OnboardingStep, CompanyDocumentType } from '@/features/onboarding/types/onboarding.types'
+import { REQUIRED_COMPANY_DOC_TYPES } from '@/features/onboarding/services/onboarding.service'
 import type { ShareholderFormData } from '@/features/onboarding/schemas/shareholder.schema'
 
 function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -110,7 +111,7 @@ export async function saveCompanyDocAction(
 
   try {
     const repo = new SupabaseDocumentRepository(supabase)
-    const doc = await repo.createCompanyDoc({ companyId, documentType, fileUrl, storagePath })
+    const doc = await repo.upsertCompanyDoc({ companyId, documentType, fileUrl, storagePath })
     return { success: true, doc }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al guardar documento' }
@@ -231,6 +232,10 @@ export async function getOnboardingSummaryAction() {
   const summary = await service.getSummary(user.id)
   if (!summary.company) return { error: 'Empresa no encontrada' as string }
 
+  const documentosFaltantes = REQUIRED_COMPANY_DOC_TYPES.filter(
+    (t) => !summary.uploadedDocTypes.includes(t)
+  )
+
   return {
     success: true,
     summary: {
@@ -239,7 +244,8 @@ export async function getOnboardingSummaryAction() {
       satVerificado: !!summary.company.syntageValidatedAt,
       legalRepRegistrado: summary.legalRepComplete,
       accionistasRegistrados: summary.shareholderCount > 0,
-      documentosCargados: summary.companyDocCount > 0,
+      documentosCargados: documentosFaltantes.length === 0,
+      documentosFaltantes,
     },
   }
 }

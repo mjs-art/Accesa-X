@@ -38,6 +38,13 @@ import {
   Bug,
 } from 'lucide-react'
 
+const DOC_LABELS: Record<string, string> = {
+  acta_constitutiva: 'Acta constitutiva',
+  actas_asamblea: 'Actas de asamblea',
+  documento_poderes: 'Poderes notariales',
+  estado_cuenta_bancario: 'Estado de cuenta bancario',
+}
+
 function formatMXN(amount: number) {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -69,6 +76,7 @@ export default function DashboardPage() {
     legalRepRegistrado: boolean
     accionistasRegistrados: boolean
     documentosCargados: boolean
+    documentosFaltantes: string[]
   } | null>(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,9 +252,9 @@ export default function DashboardPage() {
                 {!profileSummary.accionistasRegistrados && (
                   <li className="text-sm text-amber-700">• Accionistas</li>
                 )}
-                {!profileSummary.documentosCargados && (
-                  <li className="text-sm text-amber-700">• Documentos corporativos</li>
-                )}
+                {profileSummary.documentosFaltantes?.map((doc) => (
+                  <li key={doc} className="text-sm text-amber-700">• {DOC_LABELS[doc] ?? doc}</li>
+                ))}
               </ul>
             </div>
             <Button

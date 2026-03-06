@@ -110,7 +110,20 @@ export default function PerfilPage() {
   }
 
   const hasShareholders = shareholders.length > 0
-  const hasDocs = companyDocs.length > 0
+
+  const REQUIRED_DOC_TYPES = ['acta_constitutiva', 'actas_asamblea', 'documento_poderes', 'estado_cuenta_bancario']
+  const uploadedDocTypes = companyDocs.map((d) => d.documentType)
+  const missingDocTypes = REQUIRED_DOC_TYPES.filter((t) => !uploadedDocTypes.includes(t as never))
+  const hasDocs = missingDocTypes.length === 0
+
+  const legalRepComplete = !!(
+    legalRep &&
+    legalRep.nombres?.trim() &&
+    legalRep.apellidoPaterno?.trim() &&
+    legalRep.curp?.trim() &&
+    legalRep.rfcPersonal?.trim() &&
+    legalRep.email?.trim()
+  )
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -171,7 +184,7 @@ export default function PerfilPage() {
           <SectionHeader
             icon={<Users className={`h-4 w-4 ${legalRep ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
             title="Representante legal"
-            done={!!legalRep}
+            done={legalRepComplete}
             onComplete={() => goComplete('/onboarding/legal-rep')}
           />
           {legalRep ? (
@@ -240,7 +253,7 @@ export default function PerfilPage() {
             onComplete={() => goComplete('/onboarding/company-docs')}
             completeLabel="Subir documentos"
           />
-          {hasDocs ? (
+          {companyDocs.length > 0 ? (
             <div className="space-y-2">
               {companyDocs.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
@@ -248,6 +261,14 @@ export default function PerfilPage() {
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">
                     <CheckCircle2 className="h-3 w-3" />
                     Cargado
+                  </span>
+                </div>
+              ))}
+              {missingDocTypes.map((t) => (
+                <div key={t} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
+                  <span className="text-sm text-[#64748B]">{DOC_LABELS[t] ?? t}</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-0.5">
+                    Pendiente
                   </span>
                 </div>
               ))}

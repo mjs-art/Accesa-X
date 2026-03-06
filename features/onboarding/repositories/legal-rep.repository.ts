@@ -26,6 +26,7 @@ export interface UpsertLegalRepFromInvitationInput {
 export interface ILegalRepRepository {
   findByCompanyId(companyId: string): Promise<LegalRepresentative | null>
   create(input: CreateLegalRepInput): Promise<LegalRepresentative>
+  upsert(input: CreateLegalRepInput): Promise<LegalRepresentative>
   updateTelefonoVerificado(legalRepId: string, verified: boolean): Promise<void>
   upsertFromInvitation(companyId: string, input: UpsertLegalRepFromInvitationInput): Promise<void>
 }
