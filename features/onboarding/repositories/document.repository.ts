@@ -33,4 +33,5 @@ export interface IDocumentRepository {
   createShareholderDoc(input: CreateShareholderDocInput): Promise<ShareholderDocument>
   createCompanyDoc(input: CreateCompanyDocInput): Promise<CompanyDocument>
   getCompanyDocs(companyId: string): Promise<CompanyDocument[]>
+  countCompanyDocs(companyId: string): Promise<number>
 }

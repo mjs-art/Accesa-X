@@ -2,6 +2,8 @@
 
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
+import { SupabaseShareholderRepository } from '@/features/onboarding/repositories/shareholder.repository.impl'
+import { SupabaseLegalRepRepository } from '@/features/onboarding/repositories/legal-rep.repository.impl'
 import type { OnboardingInvitation } from '@/features/onboarding/types/onboarding.types'
 
 function getAdminClient() {
@@ -59,22 +61,24 @@ export async function acceptShareholderInvitationAction(
     return { error: 'expired' }
   }
 
-  // Insert shareholder record using admin client (bypasses RLS)
-  const { error: insertError } = await adminClient.from('shareholders').insert({
-    company_id: input.companyId,
-    es_persona_moral: input.esPersonaMoral,
-    posee_mas_25_porciento: input.poseeMas25Porciento,
-    porcentaje_participacion: input.porcentajeParticipacion ?? null,
-    nombres: input.nombres ?? null,
-    apellido_paterno: input.apellidoPaterno ?? null,
-    apellido_materno: input.apellidoMaterno ?? null,
-    curp: input.curp ?? null,
-    fecha_nacimiento: input.fechaNacimiento ?? null,
-    ocupacion: input.ocupacion ?? null,
-    telefono: input.telefono ? `+52${input.telefono}` : null,
-  })
-
-  if (insertError) return { error: insertError.message }
+  try {
+    const shareholderRepo = new SupabaseShareholderRepository(adminClient)
+    await shareholderRepo.create({
+      companyId: input.companyId,
+      esPersonaMoral: input.esPersonaMoral,
+      poseeMas25Porciento: input.poseeMas25Porciento,
+      porcentajeParticipacion: input.porcentajeParticipacion ?? undefined,
+      nombres: input.nombres ?? undefined,
+      apellidoPaterno: input.apellidoPaterno ?? undefined,
+      apellidoMaterno: input.apellidoMaterno ?? undefined,
+      curp: input.curp ?? undefined,
+      fechaNacimiento: input.fechaNacimiento ?? undefined,
+      ocupacion: input.ocupacion ?? undefined,
+      telefono: input.telefono ?? undefined,
+    })
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Error al guardar accionista' }
+  }
 
   await repo.markAccepted(input.token)
   return { success: true }
@@ -105,44 +109,19 @@ export async function acceptLegalRepInvitationAction(
     return { error: 'expired' }
   }
 
-  // Update or insert legal_representatives record using admin client
-  const { data: existing } = await adminClient
-    .from('legal_representatives')
-    .select('id')
-    .eq('company_id', input.companyId)
-    .eq('es_el_usuario', false)
-    .single()
-
-  if (existing) {
-    const { error: updateError } = await adminClient
-      .from('legal_representatives')
-      .update({
-        nombres: input.nombres ?? null,
-        apellido_paterno: input.apellidoPaterno ?? null,
-        apellido_materno: input.apellidoMaterno ?? null,
-        curp: input.curp ?? null,
-        rfc_personal: input.rfcPersonal ?? null,
-        email: input.email ?? null,
-        telefono: input.telefono ? `+52${input.telefono}` : null,
-      })
-      .eq('id', existing.id)
-
-    if (updateError) return { error: updateError.message }
-  } else {
-    const { error: insertError } = await adminClient.from('legal_representatives').insert({
-      company_id: input.companyId,
-      es_el_usuario: false,
-      nombres: input.nombres ?? null,
-      apellido_paterno: input.apellidoPaterno ?? null,
-      apellido_materno: input.apellidoMaterno ?? null,
-      curp: input.curp ?? null,
-      rfc_personal: input.rfcPersonal ?? null,
-      email: input.email ?? null,
-      telefono: input.telefono ? `+52${input.telefono}` : null,
-      telefono_verificado: false,
+  try {
+    const legalRepRepo = new SupabaseLegalRepRepository(adminClient)
+    await legalRepRepo.upsertFromInvitation(input.companyId, {
+      nombres: input.nombres,
+      apellidoPaterno: input.apellidoPaterno,
+      apellidoMaterno: input.apellidoMaterno,
+      curp: input.curp,
+      rfcPersonal: input.rfcPersonal,
+      email: input.email,
+      telefono: input.telefono,
     })
-
-    if (insertError) return { error: insertError.message }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Error al guardar representante legal' }
   }
 
   await repo.markAccepted(input.token)

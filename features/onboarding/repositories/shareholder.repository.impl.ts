@@ -57,6 +57,16 @@ export class SupabaseShareholderRepository implements IShareholderRepository {
     if (error) throw new Error(error.message)
   }
 
+  async countByCompanyId(companyId: string): Promise<number> {
+    const { count, error } = await this.supabase
+      .from('shareholders')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    if (error) return 0
+    return count ?? 0
+  }
+
   private toDomain(row: Record<string, unknown>): Shareholder {
     return {
       id: row.id as string,

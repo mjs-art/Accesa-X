@@ -2,10 +2,20 @@ import type { ICompanyRepository } from '../repositories/company.repository'
 import type { ILegalRepRepository } from '../repositories/legal-rep.repository'
 import type { IShareholderRepository } from '../repositories/shareholder.repository'
 import type { IInvitationRepository } from '../repositories/invitation.repository'
+import type { IDocumentRepository } from '../repositories/document.repository'
+import type { IOnboardingCreditRepository } from '../repositories/credit-application.repository'
 import type { Company, LegalRepresentative, Shareholder, OnboardingStep } from '../types/onboarding.types'
 import type { CompanyFormData } from '../schemas/company.schema'
 import type { LegalRepFormData } from '../schemas/legal-rep.schema'
 import type { ShareholderFormData } from '../schemas/shareholder.schema'
+
+export interface OnboardingSummary {
+  company: Company | null
+  legalRepComplete: boolean
+  shareholderCount: number
+  companyDocCount: number
+  onboardingComplete: boolean
+}
 
 export class OnboardingService {
   constructor(
@@ -13,6 +23,8 @@ export class OnboardingService {
     private readonly legalRepRepo: ILegalRepRepository,
     private readonly shareholderRepo: IShareholderRepository,
     private readonly invitationRepo: IInvitationRepository,
+    private readonly documentRepo: IDocumentRepository,
+    private readonly creditRepo: IOnboardingCreditRepository,
   ) {}
 
   async getCurrentStep(userId: string): Promise<OnboardingStep> {
@@ -84,6 +96,26 @@ export class OnboardingService {
 
   async completeOnboarding(companyId: string): Promise<void> {
     await this.companyRepo.markOnboardingComplete(companyId)
+    await this.creditRepo.createInitial(companyId)
+  }
+
+  async getSummary(userId: string): Promise<OnboardingSummary> {
+    const company = await this.companyRepo.findByUserId(userId)
+    if (!company) {
+      return { company: null, legalRepComplete: false, shareholderCount: 0, companyDocCount: 0, onboardingComplete: false }
+    }
+    const [legalRep, shareholderCount, companyDocCount] = await Promise.all([
+      this.legalRepRepo.findByCompanyId(company.id),
+      this.shareholderRepo.countByCompanyId(company.id),
+      this.documentRepo.countCompanyDocs(company.id),
+    ])
+    return {
+      company,
+      legalRepComplete: !!legalRep,
+      shareholderCount,
+      companyDocCount,
+      onboardingComplete: company.onboardingStep === 'complete',
+    }
   }
 
   async getPendingInvitations(companyId: string) {

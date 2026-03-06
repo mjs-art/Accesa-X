@@ -19,4 +19,5 @@ export interface IShareholderRepository {
   create(input: CreateShareholderInput): Promise<Shareholder>
   delete(shareholderId: string): Promise<void>
   deleteByCompanyId(companyId: string): Promise<void>
+  countByCompanyId(companyId: string): Promise<number>
 }

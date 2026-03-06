@@ -79,6 +79,16 @@ export class SupabaseDocumentRepository implements IDocumentRepository {
     return (data as Record<string, unknown>[]).map((row) => this.toCompanyDocDomain(row))
   }
 
+  async countCompanyDocs(companyId: string): Promise<number> {
+    const { count, error } = await this.supabase
+      .from('company_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    if (error) return 0
+    return count ?? 0
+  }
+
   private toLegalRepDocDomain(row: Record<string, unknown>): LegalRepDocument {
     return {
       id: row.id as string,

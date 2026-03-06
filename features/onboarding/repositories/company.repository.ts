@@ -13,4 +13,5 @@ export interface ICompanyRepository {
   create(input: CreateCompanyInput): Promise<Company>
   updateOnboardingStep(companyId: string, step: OnboardingStep): Promise<void>
   markOnboardingComplete(companyId: string): Promise<void>
+  verifyOwnership(companyId: string, userId: string): Promise<boolean>
 }

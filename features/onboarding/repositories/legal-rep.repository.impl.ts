@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ILegalRepRepository, CreateLegalRepInput } from './legal-rep.repository'
+import type { ILegalRepRepository, CreateLegalRepInput, UpsertLegalRepFromInvitationInput } from './legal-rep.repository'
 import type { LegalRepresentative } from '../types/onboarding.types'
 
 export class SupabaseLegalRepRepository implements ILegalRepRepository {
@@ -46,6 +46,38 @@ export class SupabaseLegalRepRepository implements ILegalRepRepository {
       .eq('id', legalRepId)
 
     if (error) throw new Error(error.message)
+  }
+
+  async upsertFromInvitation(companyId: string, input: UpsertLegalRepFromInvitationInput): Promise<void> {
+    const { data: existing } = await this.supabase
+      .from('legal_representatives')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('es_el_usuario', false)
+      .single()
+
+    const fields = {
+      nombres: input.nombres ?? null,
+      apellido_paterno: input.apellidoPaterno ?? null,
+      apellido_materno: input.apellidoMaterno ?? null,
+      curp: input.curp ?? null,
+      rfc_personal: input.rfcPersonal ?? null,
+      email: input.email ?? null,
+      telefono: input.telefono ? `+52${input.telefono}` : null,
+    }
+
+    if (existing) {
+      const { error } = await this.supabase
+        .from('legal_representatives')
+        .update(fields)
+        .eq('id', existing.id)
+      if (error) throw new Error(error.message)
+    } else {
+      const { error } = await this.supabase
+        .from('legal_representatives')
+        .insert({ company_id: companyId, es_el_usuario: false, telefono_verificado: false, ...fields })
+      if (error) throw new Error(error.message)
+    }
   }
 
   private toDomain(row: Record<string, unknown>): LegalRepresentative {

@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { getOnboardingSummaryAction } from '@/app/actions/onboarding'
-import { SupabaseDashboardRepository } from '@/features/dashboard/repositories/dashboard.repository.impl'
-import { DashboardService } from '@/features/dashboard/services/dashboard.service'
-import { SupabaseAuthRepository } from '@/features/auth/repositories/auth.repository.impl'
+import { getDashboardDataAction, signOutAction, syncSatDataAction } from '@/app/actions/dashboard'
 import type { DashboardCompany, Resumen, Cliente } from '@/features/dashboard/types/dashboard.types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -60,7 +57,6 @@ function formatDate(dateStr: string) {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [company, setCompany] = useState<DashboardCompany | null>(null)
   const [resumen, setResumen] = useState<Resumen | null>(null)
@@ -78,24 +74,19 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
-      const authRepo = new SupabaseAuthRepository(supabase)
-      const user = await authRepo.getUser()
-      if (!user) return
+      const [dashResult, summaryResult] = await Promise.all([
+        getDashboardDataAction(),
+        getOnboardingSummaryAction(),
+      ])
 
-      const dashRepo = new SupabaseDashboardRepository(supabase)
-      const service = new DashboardService(dashRepo)
-
-      const dashData = await service.getDashboardData(user.id)
-      if (!dashData) { setLoadingData(false); return }
-
-      setCompany(dashData.company)
-
-      if (dashData.verified) {
-        setResumen(dashData.resumen)
-        setClientes(dashData.clientes)
+      if ('data' in dashResult && dashResult.data) {
+        setCompany(dashResult.data.company)
+        if (dashResult.data.verified) {
+          setResumen(dashResult.data.resumen)
+          setClientes(dashResult.data.clientes)
+        }
       }
 
-      const summaryResult = await getOnboardingSummaryAction()
       if ('summary' in summaryResult && summaryResult.summary) {
         setProfileSummary(summaryResult.summary)
       }
@@ -109,8 +100,7 @@ export default function DashboardPage() {
   const hasData = resumen !== null
 
   async function handleLogout() {
-    const authRepo = new SupabaseAuthRepository(supabase)
-    await authRepo.signOut()
+    await signOutAction()
     router.push('/')
   }
 
@@ -118,28 +108,23 @@ export default function DashboardPage() {
     setSyncing(true)
     setSyncMsg(null)
 
-    const dashRepo = new SupabaseDashboardRepository(supabase)
-    const service = new DashboardService(dashRepo)
+    const result = await syncSatDataAction()
 
-    try {
-      await service.syncSatData()
-      setSyncMsg({ type: 'success', text: 'Sincronización iniciada. Los datos se actualizarán en unos minutos.' })
-
-      setLoadingData(true)
-      const authRepo = new SupabaseAuthRepository(supabase)
-      const user = await authRepo.getUser()
-      if (user) {
-        const dashData = await service.getDashboardData(user.id)
-        if (dashData?.verified) {
-          setResumen(dashData.resumen)
-          setClientes(dashData.clientes)
-        }
-      }
-      setLoadingData(false)
-    } catch {
-      setSyncMsg({ type: 'error', text: 'No se pudo sincronizar. Intenta de nuevo.' })
+    if ('error' in result) {
+      setSyncMsg({ type: 'error', text: result.error })
+      setSyncing(false)
+      return
     }
 
+    setSyncMsg({ type: 'success', text: 'Sincronización iniciada. Los datos se actualizarán en unos minutos.' })
+
+    setLoadingData(true)
+    const dashResult = await getDashboardDataAction()
+    if ('data' in dashResult && dashResult.data?.verified) {
+      setResumen(dashResult.data.resumen)
+      setClientes(dashResult.data.clientes)
+    }
+    setLoadingData(false)
     setSyncing(false)
   }
 

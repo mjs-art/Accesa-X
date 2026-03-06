@@ -61,6 +61,17 @@ export class SupabaseCompanyRepository implements ICompanyRepository {
     if (error) throw new Error(error.message)
   }
 
+  async verifyOwnership(companyId: string, userId: string): Promise<boolean> {
+    const { data, error } = await this.supabase
+      .from('companies')
+      .select('id')
+      .eq('id', companyId)
+      .eq('user_id', userId)
+      .single()
+
+    return !error && !!data
+  }
+
   private toDomain(row: Record<string, unknown>): Company {
     return {
       id: row.id as string,

@@ -2,6 +2,7 @@
 
 import { createClient as createServerClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { SupabaseCompanyRepository } from '@/features/onboarding/repositories/company.repository.impl'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import type { InvitationType } from '@/features/onboarding/types/onboarding.types'
 
@@ -16,14 +17,9 @@ export async function sendInvitationAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
-  const { data: company } = await supabase
-    .from('companies')
-    .select('id')
-    .eq('id', companyId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!company) return { error: 'Empresa no encontrada' }
+  const companyRepo = new SupabaseCompanyRepository(supabase)
+  const isOwner = await companyRepo.verifyOwnership(companyId, user.id)
+  if (!isOwner) return { error: 'Empresa no encontrada' }
 
   // Generar token único
   const token = crypto.randomUUID()

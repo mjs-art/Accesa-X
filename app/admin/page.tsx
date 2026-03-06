@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { SupabaseAdminRepository } from '@/features/admin/repositories/admin.repository.impl'
-import { AdminService } from '@/features/admin/services/admin.service'
+import { getApplicationsAction } from '@/app/actions/admin'
 import type { CreditApplication } from '@/features/admin/types/admin.types'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -37,7 +35,6 @@ function formatDate(d: string) {
 
 export default function AdminPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [applications, setApplications] = useState<CreditApplication[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,10 +47,8 @@ export default function AdminPage() {
 
   async function fetchAll() {
     setLoading(true)
-    const repo = new SupabaseAdminRepository(supabase)
-    const service = new AdminService(repo)
-    const data = await service.getApplications()
-    setApplications(data)
+    const result = await getApplicationsAction()
+    if ('applications' in result) setApplications(result.applications)
     setLoading(false)
   }
 

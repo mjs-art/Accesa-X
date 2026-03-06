@@ -10,6 +10,7 @@ import { SupabaseLegalRepRepository } from '@/features/onboarding/repositories/l
 import { SupabaseShareholderRepository } from '@/features/onboarding/repositories/shareholder.repository.impl'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import { SupabaseDocumentRepository } from '@/features/onboarding/repositories/document.repository.impl'
+import { SupabaseCreditApplicationRepository } from '@/features/onboarding/repositories/credit-application.repository.impl'
 import type { OnboardingStep, CompanyDocumentType } from '@/features/onboarding/types/onboarding.types'
 import type { ShareholderFormData } from '@/features/onboarding/schemas/shareholder.schema'
 
@@ -19,6 +20,8 @@ function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
     new SupabaseLegalRepRepository(supabase),
     new SupabaseShareholderRepository(supabase),
     new SupabaseInvitationRepository(supabase),
+    new SupabaseDocumentRepository(supabase),
+    new SupabaseCreditApplicationRepository(supabase),
   )
 }
 
@@ -162,14 +165,6 @@ export async function completeOnboardingAction(companyId: string) {
   try {
     const service = buildService(supabase)
     await service.completeOnboarding(companyId)
-
-    // Crear credit_application
-    await supabase.from('credit_applications').insert({
-      company_id: companyId,
-      tipo_credito: 'empresarial',
-      status: 'submitted',
-    })
-
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error desconocido' }
@@ -233,31 +228,18 @@ export async function getOnboardingSummaryAction() {
   if (!user) return { error: 'No autenticado' as string }
 
   const service = buildService(supabase)
-  const company = await service.getCompany(user.id)
-  if (!company) return { error: 'Empresa no encontrada' as string }
-
-  const legalRepRepo = new SupabaseLegalRepRepository(supabase)
-  const legalRep = await legalRepRepo.findByCompanyId(company.id)
-
-  const { count: shareholdersCount } = await supabase
-    .from('shareholders')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', company.id)
-
-  const { count: docsCount } = await supabase
-    .from('company_documents')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', company.id)
+  const summary = await service.getSummary(user.id)
+  if (!summary.company) return { error: 'Empresa no encontrada' as string }
 
   return {
     success: true,
     summary: {
-      companyName: company.nombreRazonSocial,
-      companyId: company.id,
-      satVerificado: !!company.syntageValidatedAt,
-      legalRepRegistrado: !!legalRep,
-      accionistasRegistrados: (shareholdersCount ?? 0) > 0,
-      documentosCargados: (docsCount ?? 0) > 0,
+      companyName: summary.company.nombreRazonSocial,
+      companyId: summary.company.id,
+      satVerificado: !!summary.company.syntageValidatedAt,
+      legalRepRegistrado: summary.legalRepComplete,
+      accionistasRegistrados: summary.shareholderCount > 0,
+      documentosCargados: summary.companyDocCount > 0,
     },
   }
 }

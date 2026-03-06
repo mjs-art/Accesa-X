@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { getCompanyForVerificationAction, getAnalyzedContractsAction, submitCreditApplicationAction } from '@/app/actions/dashboard'
+import type { AnalyzedContract } from '@/app/actions/dashboard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -11,13 +12,6 @@ import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 type TipoCredito = 'empresarial' | 'factoraje' | 'contrato'
-
-interface ContratoOption {
-  id: string
-  nombre_cliente: string
-  storage_path: string
-  monto_contrato: number | null
-}
 
 // ── Datos estáticos ────────────────────────────────────────────────────────────
 const TIPOS: { id: TipoCredito; emoji: string; titulo: string; descripcion: string }[] = [
@@ -107,7 +101,6 @@ function getFileName(path: string) {
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function SolicitarCreditoPage() {
   const router = useRouter()
-  const supabase = createClient()
   const { toast } = useToast()
 
   // Wizard state
@@ -122,24 +115,15 @@ export default function SolicitarCreditoPage() {
 
   // Data
   const [companyId, setCompanyId] = useState<string | null>(null)
-  const [contratos, setContratos] = useState<ContratoOption[]>([])
+  const [contratos, setContratos] = useState<AnalyzedContract[]>([])
   const [loadingContratos, setLoadingContratos] = useState(false)
 
   // Cargar empresa al montar
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
-
-      const { data: company } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (company) setCompanyId(company.id)
+      const result = await getCompanyForVerificationAction()
+      if ('error' in result) { router.push('/'); return }
+      setCompanyId(result.company.id)
     }
     init()
   }, [])
@@ -148,16 +132,10 @@ export default function SolicitarCreditoPage() {
   useEffect(() => {
     if (tipo !== 'contrato' || !companyId) return
     setLoadingContratos(true)
-    supabase
-      .from('contracts')
-      .select('id, nombre_cliente, storage_path, monto_contrato')
-      .eq('company_id', companyId)
-      .eq('analysis_status', 'completed')
-      .order('uploaded_at', { ascending: false })
-      .then(({ data }) => {
-        setContratos((data as unknown as ContratoOption[]) ?? [])
-        setLoadingContratos(false)
-      })
+    getAnalyzedContractsAction(companyId).then(({ contracts }) => {
+      setContratos(contracts)
+      setLoadingContratos(false)
+    })
   }, [tipo, companyId])
 
   // ── Validaciones por paso ──────────────────────────────────────────────────
@@ -179,18 +157,17 @@ export default function SolicitarCreditoPage() {
 
     const montoNum = parseFloat(monto.replace(/[^0-9.]/g, ''))
 
-    const { error } = await supabase.from('credit_applications').insert({
-      company_id: companyId,
-      tipo_credito: tipo,
-      monto_solicitado: montoNum,
-      plazo_meses: parseInt(plazo),
+    const result = await submitCreditApplicationAction({
+      companyId,
+      tipoCredito: tipo,
+      montoSolicitado: montoNum,
+      plazoMeses: parseInt(plazo),
       destino: destino.trim(),
-      contract_id: tipo === 'contrato' && contractId ? contractId : null,
-      status: 'submitted',
+      contractId: tipo === 'contrato' && contractId ? contractId : null,
     })
 
-    if (error) {
-      toast({ title: 'Error al enviar', description: error.message, variant: 'destructive' })
+    if ('error' in result) {
+      toast({ title: 'Error al enviar', description: result.error, variant: 'destructive' })
       setSubmitting(false)
       return
     }
@@ -344,8 +321,8 @@ export default function SolicitarCreditoPage() {
                       <option value="">Selecciona un contrato...</option>
                       {contratos.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.nombre_cliente} — {getFileName(c.storage_path)}
-                          {c.monto_contrato ? ` (${formatMXN(String(c.monto_contrato))})` : ''}
+                          {c.nombreCliente} — {getFileName(c.storagePath)}
+                          {c.montoContrato ? ` (${formatMXN(String(c.montoContrato))})` : ''}
                         </option>
                       ))}
                     </select>
@@ -394,7 +371,7 @@ export default function SolicitarCreditoPage() {
                   {tipo === 'contrato' && selectedContrato && (
                     <SummaryRow
                       label="Contrato de respaldo"
-                      value={`${selectedContrato.nombre_cliente} — ${getFileName(selectedContrato.storage_path)}`}
+                      value={`${selectedContrato.nombreCliente} — ${getFileName(selectedContrato.storagePath)}`}
                     />
                   )}
                   <div className="border-t border-slate-100 pt-3">

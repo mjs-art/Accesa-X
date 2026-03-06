@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { advanceToStepAction } from '@/app/actions/onboarding'
+import { getCompanyForVerificationAction, connectSyntageAction } from '@/app/actions/dashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,7 +14,7 @@ type Estado = 'idle' | 'loading' | 'success' | 'error'
 interface CompanyData {
   id: string
   rfc: string
-  nombre_razon_social: string
+  nombreRazonSocial: string
 }
 
 export default function VerificacionFiscalPage() {
@@ -25,35 +25,22 @@ function VerificacionFiscalPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromPerfil = searchParams.get('from') === 'perfil'
-  const supabase = createClient()
 
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [ciec, setCiec] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [razonSocial] = useState<string | null>(null)
   const [loadingCompany, setLoadingCompany] = useState(true)
 
-  // Cargar la empresa del usuario al montar
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function fetchCompany() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
-
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, rfc, nombre_razon_social')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (error || !data) {
+      const result = await getCompanyForVerificationAction()
+      if ('error' in result) {
         router.push('/onboarding/empresa')
         return
       }
-      setCompany(data)
+      setCompany(result.company)
       setLoadingCompany(false)
     }
     fetchCompany()
@@ -66,25 +53,15 @@ function VerificacionFiscalPageInner() {
     setEstado('loading')
     setErrorMsg(null)
 
-    const { data, error } = await supabase.functions.invoke('syntage-connect', {
-      body: { rfc: company.rfc, ciec, company_id: company.id },
-    })
+    const result = await connectSyntageAction(company.rfc, ciec, company.id)
 
-    if (error) {
+    if ('error' in result) {
       setEstado('error')
-      setErrorMsg('No se pudo conectar con el SAT. Intenta de nuevo.')
+      setErrorMsg(result.error)
       return
     }
 
-    if (data?.success && data?.status === 'valid') {
-      setEstado('success')
-    } else if (data?.status === 'invalid') {
-      setEstado('error')
-      setErrorMsg('CIEC incorrecta. Verifica tu contraseña del portal sat.gob.mx e intenta de nuevo.')
-    } else {
-      setEstado('error')
-      setErrorMsg('No fue posible verificar tu RFC en este momento. Intenta de nuevo en unos minutos.')
-    }
+    setEstado('success')
   }
 
   async function handleSaltar() {
@@ -223,11 +200,6 @@ function VerificacionFiscalPageInner() {
                 <p className="text-sm font-semibold text-emerald-800">
                   Verificación exitosa
                 </p>
-                {razonSocial && (
-                  <p className="text-sm text-emerald-700 mt-0.5">
-                    {razonSocial}
-                  </p>
-                )}
                 <p className="text-xs text-emerald-600 mt-1">
                   Tu situación fiscal fue validada correctamente ante el SAT.
                 </p>

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getOnboardingStateAction, saveShareholdersAction, advanceToStepAction, getShareholdersAction } from '@/app/actions/onboarding'
 import { sendInvitationAction } from '@/app/actions/send-invitation'
+import { shareholderSchema } from '@/features/onboarding/schemas/shareholder.schema'
 import type { ShareholderFormData } from '@/features/onboarding/schemas/shareholder.schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +39,7 @@ function ShareholdersPageInner() {
   const [shareholders, setShareholders] = useState<ShareholderFormData[]>([{ ...EMPTY_SHAREHOLDER }])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<number, Partial<Record<keyof ShareholderFormData, string>>>>({})
 
   useEffect(() => {
     getOnboardingStateAction().then(async (result) => {
@@ -79,6 +81,15 @@ function ShareholdersPageInner() {
       updated[index] = { ...updated[index], [field]: value }
       return updated
     })
+    setFieldErrors((prev) => {
+      const updated = { ...prev }
+      if (updated[index]) {
+        const copy = { ...updated[index] }
+        delete copy[field]
+        updated[index] = copy
+      }
+      return updated
+    })
     setError(null)
   }
 
@@ -88,29 +99,28 @@ function ShareholdersPageInner() {
 
   function removeShareholder(index: number) {
     setShareholders((prev) => prev.filter((_, i) => i !== index))
+    setFieldErrors({})
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!companyId) return
 
-    // Validar datos requeridos por accionista
+    // Validate each shareholder via schema
+    const newFieldErrors: Record<number, Partial<Record<keyof ShareholderFormData, string>>> = {}
     for (let i = 0; i < shareholders.length; i++) {
-      const s = shareholders[i]
-      if (!s.porcentajeParticipacion) {
-        setError(`El accionista ${i + 1} debe tener un porcentaje de participación.`)
-        return
+      const parsed = shareholderSchema.safeParse(shareholders[i])
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors
+        newFieldErrors[i] = Object.fromEntries(
+          Object.entries(flat).map(([k, v]) => [k, (v as string[])[0]])
+        ) as Partial<Record<keyof ShareholderFormData, string>>
       }
-      if (s.poseeMas25Porciento && !s.esPersonaMoral) {
-        if (!s.nombres?.trim()) {
-          setError(`El nombre del accionista ${i + 1} es requerido.`)
-          return
-        }
-        if (!s.apellidoPaterno?.trim()) {
-          setError(`El apellido paterno del accionista ${i + 1} es requerido.`)
-          return
-        }
-      }
+    }
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors)
+      setError('Corrige los errores en el formulario antes de continuar.')
+      return
     }
 
     const totalPorcentaje = shareholders.reduce((sum, s) => sum + (s.porcentajeParticipacion ?? 0), 0)
@@ -219,6 +229,9 @@ function ShareholdersPageInner() {
                   onChange={(e) => updateShareholder(index, 'porcentajeParticipacion', e.target.value ? parseFloat(e.target.value) : undefined)}
                   className="h-11 w-40"
                 />
+                {fieldErrors[index]?.porcentajeParticipacion && (
+                  <p className="text-xs text-red-500">{fieldErrors[index].porcentajeParticipacion}</p>
+                )}
               </div>
 
               {/* Personal data — only if poseeMas25Porciento */}
@@ -232,6 +245,9 @@ function ShareholdersPageInner() {
                       onChange={(e) => updateShareholder(index, 'nombres', e.target.value)}
                       className="h-11"
                     />
+                    {fieldErrors[index]?.nombres && (
+                      <p className="text-xs text-red-500">{fieldErrors[index].nombres}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-[#0F172A]">Apellido paterno</Label>
@@ -241,6 +257,9 @@ function ShareholdersPageInner() {
                       onChange={(e) => updateShareholder(index, 'apellidoPaterno', e.target.value)}
                       className="h-11"
                     />
+                    {fieldErrors[index]?.apellidoPaterno && (
+                      <p className="text-xs text-red-500">{fieldErrors[index].apellidoPaterno}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-[#0F172A]">Apellido materno</Label>
