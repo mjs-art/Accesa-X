@@ -238,7 +238,9 @@ function ShareholdersPageInner() {
               {s.poseeMas25Porciento && !s.esPersonaMoral && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">Nombre(s)</Label>
+                    <Label className="text-sm font-medium text-[#0F172A]">
+                      Nombre(s)<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
                     <Input
                       placeholder="Ej. Juan"
                       value={s.nombres ?? ''}
@@ -250,7 +252,9 @@ function ShareholdersPageInner() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">Apellido paterno</Label>
+                    <Label className="text-sm font-medium text-[#0F172A]">
+                      Apellido paterno<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
                     <Input
                       placeholder="Ej. Pérez"
                       value={s.apellidoPaterno ?? ''}
@@ -271,7 +275,9 @@ function ShareholdersPageInner() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">CURP</Label>
+                    <Label className="text-sm font-medium text-[#0F172A]">
+                      CURP<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
                     <Input
                       placeholder="18 caracteres"
                       value={s.curp ?? ''}
@@ -279,6 +285,9 @@ function ShareholdersPageInner() {
                       className="h-11 font-mono tracking-wider"
                       maxLength={18}
                     />
+                    {fieldErrors[index]?.curp && (
+                      <p className="text-xs text-red-500">{fieldErrors[index].curp}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-[#0F172A]">Fecha de nacimiento</Label>
@@ -311,8 +320,7 @@ function ShareholdersPageInner() {
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-sm font-medium text-[#0F172A]">
-                      Correo electrónico{' '}
-                      <span className="text-[#64748B] font-normal">(opcional — para invitarlo a completar su información)</span>
+                      Correo electrónico<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
                       type="email"
@@ -321,6 +329,9 @@ function ShareholdersPageInner() {
                       onChange={(e) => updateShareholder(index, 'email', e.target.value)}
                       className="h-11"
                     />
+                    {fieldErrors[index]?.email && (
+                      <p className="text-xs text-red-500">{fieldErrors[index].email}</p>
+                    )}
                   </div>
                 </div>
               )}

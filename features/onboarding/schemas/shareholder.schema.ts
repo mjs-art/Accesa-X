@@ -37,21 +37,19 @@ export const shareholderSchema = z
         path: ['porcentajeParticipacion'],
       })
     }
-    // When shareholder owns >25% and is a natural person, name is required
+    // When shareholder owns >25% and is a natural person, personal fields are required
     if (data.poseeMas25Porciento && !data.esPersonaMoral) {
       if (!data.nombres || data.nombres.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ingresa el nombre (mínimo 2 caracteres)',
-          path: ['nombres'],
-        })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Nombre es requerido (mínimo 2 caracteres)', path: ['nombres'] })
       }
       if (!data.apellidoPaterno || data.apellidoPaterno.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ingresa el apellido paterno (mínimo 2 caracteres)',
-          path: ['apellidoPaterno'],
-        })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Apellido paterno es requerido (mínimo 2 caracteres)', path: ['apellidoPaterno'] })
+      }
+      if (!data.curp || data.curp.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CURP es requerida', path: ['curp'] })
+      }
+      if (!data.email || data.email.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Correo electrónico es requerido', path: ['email'] })
       }
     }
   })
