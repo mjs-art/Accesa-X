@@ -1,31 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { getAdminCompaniesAction } from '@/app/actions/admin'
+import type { AdminCompanyWithApps } from '@/features/admin/types/admin.types'
 import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { CheckCircle2, Loader2, Search, XCircle } from 'lucide-react'
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface CreditApp {
-  id: string
-  tipo_credito: string
-  monto_solicitado: number
-  status: string
-}
-
-interface Company {
-  id: string
-  nombre_razon_social: string
-  rfc: string
-  industria: string | null
-  tamano_empresa: string | null
-  estatus_sat: string | null
-  created_at: string
-  credit_applications: CreditApp[]
-}
 
 // ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
@@ -51,8 +33,7 @@ function formatDate(d: string) {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function AdminEmpresasPage() {
-  const supabase = createClient()
-  const [companies, setCompanies] = useState<Company[]>([])
+  const [companies, setCompanies] = useState<AdminCompanyWithApps[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -61,21 +42,14 @@ export default function AdminEmpresasPage() {
 
   async function fetchAll() {
     setLoading(true)
-    const { data } = await supabase
-      .from('companies')
-      .select(`
-        id, nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat, created_at,
-        credit_applications ( id, tipo_credito, monto_solicitado, status )
-      `)
-      .order('created_at', { ascending: false })
-
-    setCompanies((data as unknown as Company[]) ?? [])
+    const result = await getAdminCompaniesAction()
+    if ('companies' in result) setCompanies(result.companies)
     setLoading(false)
   }
 
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase()
-    return !q || c.nombre_razon_social.toLowerCase().includes(q) || c.rfc.toLowerCase().includes(q)
+    return !q || c.nombreRazonSocial.toLowerCase().includes(q) || c.rfc.toLowerCase().includes(q)
   })
 
   return (
@@ -122,13 +96,13 @@ export default function AdminEmpresasPage() {
             </TableHeader>
             <TableBody>
               {filtered.map((company) => {
-                const apps = company.credit_applications ?? []
-                const totalMonto = apps.reduce((sum, a) => sum + (a.monto_solicitado ?? 0), 0)
+                const apps = company.creditApplications ?? []
+                const totalMonto = apps.reduce((sum, a) => sum + (a.montoSolicitado ?? 0), 0)
 
                 return (
                   <TableRow key={company.id} className="hover:bg-slate-50/60 align-top">
                     <TableCell className="pl-6 py-4">
-                      <p className="text-sm font-semibold text-[#0F172A]">{company.nombre_razon_social}</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">{company.nombreRazonSocial}</p>
                       <p className="text-xs text-[#64748B] font-mono mt-0.5">{company.rfc}</p>
                     </TableCell>
 
@@ -137,11 +111,11 @@ export default function AdminEmpresasPage() {
                     </TableCell>
 
                     <TableCell className="text-sm text-[#64748B] py-4">
-                      {company.tamano_empresa ?? '—'}
+                      {company.tamanoEmpresa ?? '—'}
                     </TableCell>
 
                     <TableCell className="py-4">
-                      {company.estatus_sat ? (
+                      {company.estatusSat ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Conectado
@@ -160,7 +134,7 @@ export default function AdminEmpresasPage() {
                       ) : (
                         <div className="space-y-2">
                           {apps.map((a) => {
-                            const tipo = TIPO_CONFIG[a.tipo_credito] ?? { label: a.tipo_credito, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
+                            const tipo = TIPO_CONFIG[a.tipoCredito] ?? { label: a.tipoCredito, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
                             const status = STATUS_CONFIG[a.status] ?? { label: a.status, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
                             return (
                               <div key={a.id} className="flex items-center gap-2 flex-wrap">
@@ -170,7 +144,7 @@ export default function AdminEmpresasPage() {
                                 <Badge className={`${status.classes} border text-xs px-2 py-0.5 font-medium`}>
                                   {status.label}
                                 </Badge>
-                                <span className="text-xs text-[#64748B]">{formatMXN(a.monto_solicitado)}</span>
+                                <span className="text-xs text-[#64748B]">{formatMXN(a.montoSolicitado)}</span>
                               </div>
                             )
                           })}
@@ -184,7 +158,7 @@ export default function AdminEmpresasPage() {
                     </TableCell>
 
                     <TableCell className="text-sm text-[#64748B] py-4">
-                      {formatDate(company.created_at)}
+                      {formatDate(company.createdAt)}
                     </TableCell>
                   </TableRow>
                 )

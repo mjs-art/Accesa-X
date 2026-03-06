@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { debugResetSyntageAction } from '@/app/actions/dashboard'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Trash2, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 
@@ -14,7 +14,6 @@ interface ResetResult {
 
 export default function DebugPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ResetResult | null>(null)
   const [confirmed, setConfirmed] = useState(false)
@@ -23,13 +22,8 @@ export default function DebugPage() {
     setLoading(true)
     setResult(null)
 
-    const { data, error } = await supabase.functions.invoke('debug-reset-syntage')
-
-    if (error) {
-      setResult({ success: false, error: error.message })
-    } else {
-      setResult(data)
-    }
+    const data = await debugResetSyntageAction()
+    setResult(data as ResetResult)
     setLoading(false)
     setConfirmed(false)
   }

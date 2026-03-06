@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { advanceToStepAction } from '@/app/actions/onboarding'
+import { getCompanyForVerificationAction, connectSyntageAction } from '@/app/actions/dashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,40 +14,33 @@ type Estado = 'idle' | 'loading' | 'success' | 'error'
 interface CompanyData {
   id: string
   rfc: string
-  nombre_razon_social: string
+  nombreRazonSocial: string
 }
 
 export default function VerificacionFiscalPage() {
+  return <Suspense><VerificacionFiscalPageInner /></Suspense>
+}
+
+function VerificacionFiscalPageInner() {
   const router = useRouter()
-  const supabase = createClient()
+  const searchParams = useSearchParams()
+  const fromPerfil = searchParams.get('from') === 'perfil'
 
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [ciec, setCiec] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [razonSocial] = useState<string | null>(null)
   const [loadingCompany, setLoadingCompany] = useState(true)
 
-  // Cargar la empresa del usuario al montar
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function fetchCompany() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
-
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, rfc, nombre_razon_social')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (error || !data) {
+      const result = await getCompanyForVerificationAction()
+      if ('error' in result) {
         router.push('/onboarding/empresa')
         return
       }
-      setCompany(data)
+      setCompany(result.company)
       setLoadingCompany(false)
     }
     fetchCompany()
@@ -59,25 +53,22 @@ export default function VerificacionFiscalPage() {
     setEstado('loading')
     setErrorMsg(null)
 
-    const { data, error } = await supabase.functions.invoke('syntage-connect', {
-      body: { rfc: company.rfc, ciec, company_id: company.id },
-    })
+    const result = await connectSyntageAction(company.rfc, ciec, company.id)
 
-    if (error) {
+    if ('error' in result) {
       setEstado('error')
-      setErrorMsg('No se pudo conectar con el SAT. Intenta de nuevo.')
+      setErrorMsg(result.error)
       return
     }
 
-    if (data?.success && data?.status === 'valid') {
-      setEstado('success')
-    } else if (data?.status === 'invalid') {
-      setEstado('error')
-      setErrorMsg('CIEC incorrecta. Verifica tu contraseña del portal sat.gob.mx e intenta de nuevo.')
-    } else {
-      setEstado('error')
-      setErrorMsg('No fue posible verificar tu RFC en este momento. Intenta de nuevo en unos minutos.')
+    setEstado('success')
+  }
+
+  async function handleSaltar() {
+    if (company) {
+      await advanceToStepAction(company.id, 'legal-rep')
     }
+    router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
   }
 
   function handleReintentar() {
@@ -96,19 +87,20 @@ export default function VerificacionFiscalPage() {
 
   return (
     <>
-      {/* Progress indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[#0F2D5E]">Paso 2 de 3</span>
-          <span className="text-sm text-[#64748B]">Verificación fiscal</span>
+      {!fromPerfil && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[#0F2D5E]">Paso 2 de 7</span>
+            <span className="text-sm text-[#64748B]">Verificación fiscal</span>
+          </div>
+          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-[#00C896] transition-all"
+              style={{ width: '28%' }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[#00C896] transition-all"
-            style={{ width: '66%' }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -192,7 +184,7 @@ export default function VerificacionFiscalPage() {
               variant="ghost"
               className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
               disabled={estado === 'loading'}
-              onClick={() => router.push('/dashboard')}
+              onClick={handleSaltar}
             >
               Saltar verificación por ahora
             </Button>
@@ -208,11 +200,6 @@ export default function VerificacionFiscalPage() {
                 <p className="text-sm font-semibold text-emerald-800">
                   Verificación exitosa
                 </p>
-                {razonSocial && (
-                  <p className="text-sm text-emerald-700 mt-0.5">
-                    {razonSocial}
-                  </p>
-                )}
                 <p className="text-xs text-emerald-600 mt-1">
                   Tu situación fiscal fue validada correctamente ante el SAT.
                 </p>
@@ -220,7 +207,10 @@ export default function VerificacionFiscalPage() {
             </div>
 
             <Button
-              onClick={() => router.push('/onboarding/contratos')}
+              onClick={async () => {
+                if (company) await advanceToStepAction(company.id, 'legal-rep')
+                router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
+              }}
               className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
             >
               Continuar

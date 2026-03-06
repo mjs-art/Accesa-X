@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import {
+  getApplicationWithDetailsAction,
+  getNotesAction,
+  changeApplicationStatusAction,
+  addNoteAction,
+  getSignedDownloadUrlAction,
+} from '@/app/actions/admin'
+import type { ApplicationDetail, InternalNote } from '@/features/admin/types/admin.types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,50 +21,6 @@ import {
   AlertTriangle, ArrowLeft, CheckCircle2, Clock,
   DollarSign, Download, FileText, Loader2, TrendingUp,
 } from 'lucide-react'
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface AnalysisResult {
-  resumen: string
-  monto_total: number
-  moneda: string
-  fecha_inicio: string | null
-  fecha_fin: string | null
-  fechas_pago: string[]
-  entregables: string[]
-  riesgos: { descripcion: string; nivel: 'alto' | 'medio' | 'bajo' }[]
-  cliente_nombre: string
-  viabilidad_score: number
-  viabilidad_razon: string
-}
-
-interface ApplicationDetail {
-  id: string
-  tipo_credito: string
-  monto_solicitado: number
-  plazo_meses: number
-  destino: string
-  status: string
-  created_at: string
-  companies: {
-    nombre_razon_social: string
-    rfc: string
-    industria: string | null
-    tamano_empresa: string | null
-    estatus_sat: string | null
-  } | null
-  contracts: {
-    storage_path: string
-    monto_contrato: number | null
-    analysis_result: AnalysisResult | null
-  } | null
-}
-
-interface Note {
-  id: string
-  note: string
-  author_email: string
-  created_at: string
-}
 
 // ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
@@ -102,13 +65,11 @@ function getFileName(path: string) {
 export default function AdminSolicitudPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const supabase = createClient()
   const { toast } = useToast()
 
   const [app, setApp] = useState<ApplicationDetail | null>(null)
-  const [notes, setNotes] = useState<Note[]>([])
+  const [notes, setNotes] = useState<InternalNote[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null)
 
   const [newNote, setNewNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
@@ -123,59 +84,30 @@ export default function AdminSolicitudPage() {
 
   async function init() {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) setCurrentUser({ id: user.id, email: user.email ?? '' })
-    await Promise.all([fetchApp(), fetchNotes()])
+    const [appResult, notesResult] = await Promise.all([
+      getApplicationWithDetailsAction(id),
+      getNotesAction(id),
+    ])
+    if ('application' in appResult) setApp(appResult.application)
+    if ('notes' in notesResult) setNotes(notesResult.notes)
     setLoading(false)
   }
 
-  async function fetchApp() {
-    const { data } = await supabase
-      .from('credit_applications')
-      .select(`
-        id, tipo_credito, monto_solicitado, plazo_meses, destino, status, created_at,
-        companies ( nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat ),
-        contracts:contract_id ( storage_path, monto_contrato, analysis_result )
-      `)
-      .eq('id', id)
-      .single()
-
-    setApp(data as unknown as ApplicationDetail ?? null)
+  async function refreshNotes() {
+    const result = await getNotesAction(id)
+    if ('notes' in result) setNotes(result.notes)
   }
 
-  async function fetchNotes() {
-    const { data } = await supabase
-      .from('internal_notes')
-      .select('id, note, author_email, created_at')
-      .eq('credit_application_id', id)
-      .order('created_at', { ascending: true })
-
-    setNotes((data as unknown as Note[]) ?? [])
-  }
-
-  async function changeStatus(newStatus: string, auditText: string) {
+  async function changeStatus(newStatus: 'en_revision' | 'aprobado' | 'rechazado', auditText: string) {
     setUpdatingStatus(true)
-    const { error } = await supabase
-      .from('credit_applications')
-      .update({ status: newStatus })
-      .eq('id', id)
-
-    if (error) {
-      toast({ title: 'Error al actualizar', description: error.message, variant: 'destructive' })
+    const result = await changeApplicationStatusAction(id, newStatus, auditText)
+    if ('error' in result) {
+      toast({ title: 'Error al actualizar', description: result.error, variant: 'destructive' })
       setUpdatingStatus(false)
       return false
     }
-
-    // Nota de auditoría automática
-    await supabase.from('internal_notes').insert({
-      credit_application_id: id,
-      admin_id: currentUser?.id,
-      author_email: currentUser?.email ?? 'admin',
-      note: `[SISTEMA] ${auditText}`,
-    })
-
     setApp((prev) => prev ? { ...prev, status: newStatus } : prev)
-    await fetchNotes()
+    await refreshNotes()
     setUpdatingStatus(false)
     return true
   }
@@ -206,24 +138,19 @@ export default function AdminSolicitudPage() {
   async function handleAddNote() {
     if (!newNote.trim() || addingNote) return
     setAddingNote(true)
-    const { error } = await supabase.from('internal_notes').insert({
-      credit_application_id: id,
-      admin_id: currentUser?.id,
-      author_email: currentUser?.email ?? 'admin',
-      note: newNote.trim(),
-    })
-    if (error) {
+    const result = await addNoteAction(id, newNote.trim())
+    if ('error' in result) {
       toast({ title: 'Error al guardar nota', variant: 'destructive' })
     } else {
       setNewNote('')
-      await fetchNotes()
+      await refreshNotes()
     }
     setAddingNote(false)
   }
 
   async function handleDownload(storagePath: string) {
-    const { data } = await supabase.storage.from('contracts').createSignedUrl(storagePath, 120)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    const result = await getSignedDownloadUrlAction(storagePath)
+    if ('signedUrl' in result) window.open(result.signedUrl, '_blank')
     else toast({ title: 'No se pudo generar el enlace de descarga', variant: 'destructive' })
   }
 
@@ -245,7 +172,7 @@ export default function AdminSolicitudPage() {
   }
 
   const statusCfg = STATUS_CONFIG[app.status] ?? { label: app.status, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
-  const r = app.contracts?.analysis_result
+  const r = app.contract?.analysisResult
   const viabilidadColor = r
     ? r.viabilidad_score >= 70 ? 'bg-[#00C896]' : r.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
     : ''
@@ -260,7 +187,7 @@ export default function AdminSolicitudPage() {
             Volver
           </Button>
           <div className="h-4 w-px bg-slate-200" />
-          <h1 className="text-xl font-bold text-[#0F172A]">{app.companies?.nombre_razon_social ?? '—'}</h1>
+          <h1 className="text-xl font-bold text-[#0F172A]">{app.company?.nombreRazonSocial ?? '—'}</h1>
         </div>
         <Badge className={`${statusCfg.classes} border px-3 py-1 font-medium`}>{statusCfg.label}</Badge>
       </div>
@@ -269,22 +196,22 @@ export default function AdminSolicitudPage() {
       <Card className="border-slate-200 shadow-sm">
         <CardHeader><CardTitle className="text-sm font-semibold text-[#64748B] uppercase tracking-wider">Datos de la empresa</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
-          <Info label="Razón social" value={app.companies?.nombre_razon_social} />
-          <Info label="RFC" value={<span className="font-mono">{app.companies?.rfc}</span>} />
-          <Info label="Industria" value={app.companies?.industria} />
-          <Info label="Tamaño" value={app.companies?.tamano_empresa} />
+          <Info label="Razón social" value={app.company?.nombreRazonSocial} />
+          <Info label="RFC" value={<span className="font-mono">{app.company?.rfc}</span>} />
+          <Info label="Industria" value={app.company?.industria} />
+          <Info label="Tamaño" value={app.company?.tamanoEmpresa} />
           <Info
             label="Estatus SAT"
             value={
-              app.companies?.estatus_sat ? (
+              app.company?.estatusSat ? (
                 <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  {app.companies.estatus_sat}
+                  {app.company.estatusSat}
                 </Badge>
               ) : '—'
             }
           />
-          <Info label="Fecha solicitud" value={formatDate(app.created_at)} />
+          <Info label="Fecha solicitud" value={formatDate(app.createdAt)} />
         </CardContent>
       </Card>
 
@@ -292,9 +219,9 @@ export default function AdminSolicitudPage() {
       <Card className="border-slate-200 shadow-sm">
         <CardHeader><CardTitle className="text-sm font-semibold text-[#64748B] uppercase tracking-wider">Detalles de la solicitud</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
-          <Info label="Tipo de crédito" value={TIPO_LABELS[app.tipo_credito] ?? app.tipo_credito} />
-          <Info label="Monto solicitado" value={<span className="text-base font-bold text-[#0F2D5E]">{formatMXN(app.monto_solicitado)}</span>} />
-          <Info label="Plazo" value={`${app.plazo_meses} meses`} />
+          <Info label="Tipo de crédito" value={TIPO_LABELS[app.tipoCredito] ?? app.tipoCredito} />
+          <Info label="Monto solicitado" value={<span className="text-base font-bold text-[#0F2D5E]">{formatMXN(app.montoSolicitado)}</span>} />
+          <Info label="Plazo" value={`${app.plazoMeses} meses`} />
           <div className="col-span-2">
             <p className="text-xs text-[#64748B] mb-1.5">Destino del crédito</p>
             <p className="text-sm text-[#0F172A] bg-slate-50 rounded-lg p-3 leading-relaxed">{app.destino}</p>
@@ -303,7 +230,7 @@ export default function AdminSolicitudPage() {
       </Card>
 
       {/* ── Sección 3: Contrato de respaldo ───────────────────────────────── */}
-      {app.contracts && (
+      {app.contract && (
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -311,7 +238,7 @@ export default function AdminSolicitudPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDownload(app.contracts!.storage_path)}
+                onClick={() => handleDownload(app.contract!.storagePath)}
                 className="gap-1.5 text-[#0F2D5E] border-[#0F2D5E]/20 hover:bg-[#0F2D5E]/5"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -322,7 +249,7 @@ export default function AdminSolicitudPage() {
           <CardContent className="space-y-5">
             <div className="flex items-center gap-2 text-sm text-[#64748B]">
               <FileText className="h-4 w-4" />
-              {getFileName(app.contracts.storage_path)}
+              {getFileName(app.contract.storagePath)}
             </div>
 
             {r && (
@@ -426,7 +353,7 @@ export default function AdminSolicitudPage() {
                       {isSystem ? note.note.replace('[SISTEMA] ', '') : note.note}
                     </p>
                     <p className="text-xs text-[#64748B] mt-1.5">
-                      {isSystem ? '⚙️ Sistema' : note.author_email} · {formatDate(note.created_at)}
+                      {isSystem ? '⚙️ Sistema' : note.authorEmail} · {formatDate(note.createdAt)}
                     </p>
                   </div>
                 )
@@ -497,8 +424,8 @@ export default function AdminSolicitudPage() {
           </DialogHeader>
           <p className="text-sm text-[#64748B]">
             ¿Confirmas que deseas <strong>aprobar</strong> la solicitud de{' '}
-            <strong>{app.companies?.nombre_razon_social}</strong> por{' '}
-            <strong>{formatMXN(app.monto_solicitado)}</strong>?
+            <strong>{app.company?.nombreRazonSocial}</strong> por{' '}
+            <strong>{formatMXN(app.montoSolicitado)}</strong>?
           </p>
           <div className="flex gap-2 justify-end mt-2">
             <Button variant="outline" size="sm" onClick={() => setApproveOpen(false)}>Cancelar</Button>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { saveEmpresaAction } from '@/app/actions/onboarding'
+import { companySchema, INDUSTRIAS, TAMANOS } from '@/features/onboarding/schemas/company.schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,40 +16,19 @@ import {
 } from '@/components/ui/select'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
-const INDUSTRIAS = [
-  'Manufactura',
-  'Servicios',
-  'Comercio',
-  'Construcción',
-  'Tecnología',
-  'Otro',
-]
-
-const TAMANOS = [
-  { value: '1-10', label: '1 – 10 empleados' },
-  { value: '11-50', label: '11 – 50 empleados' },
-  { value: '51-200', label: '51 – 200 empleados' },
-  { value: '200+', label: 'Más de 200 empleados' },
-]
-
-// RFC mexicano: 3-4 letras + 6 dígitos (fecha) + 3 alfanuméricos (homoclave)
-// Personas morales: 12 chars | Personas físicas: 13 chars
-const RFC_REGEX = /^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/i
-
 function getRfcStatus(rfc: string): 'empty' | 'valid' | 'invalid' {
   if (!rfc) return 'empty'
-  return RFC_REGEX.test(rfc) ? 'valid' : 'invalid'
+  return companySchema.shape.rfc.safeParse(rfc).success ? 'valid' : 'invalid'
 }
 
 export default function EmpresaPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [form, setForm] = useState({
-    nombre_razon_social: '',
+    nombreRazonSocial: '',
     rfc: '',
     industria: '',
-    tamano_empresa: '',
+    tamanoEmpresa: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,36 +43,12 @@ export default function EmpresaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
-    if (rfcStatus !== 'valid') {
-      setError('El RFC no tiene un formato válido (12-13 caracteres)')
-      return
-    }
-
     setLoading(true)
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const result = await saveEmpresaAction(form)
 
-    if (userError || !user) {
-      router.push('/')
-      return
-    }
-
-    const { error: insertError } = await supabase.from('companies').insert({
-      user_id: user.id,
-      nombre_razon_social: form.nombre_razon_social.trim(),
-      rfc: form.rfc.toUpperCase().trim(),
-      industria: form.industria,
-      tamano_empresa: form.tamano_empresa,
-    })
-
-    if (insertError) {
-      // RFC duplicado para este usuario
-      if (insertError.code === '23505') {
-        setError('Ya existe una empresa registrada con ese RFC en tu cuenta.')
-      } else {
-        setError('Error al guardar. Intenta de nuevo.')
-      }
+    if (result.error) {
+      setError(typeof result.error === 'string' ? result.error : 'Error de validación')
       setLoading(false)
       return
     }
@@ -105,13 +61,13 @@ export default function EmpresaPage() {
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[#0F2D5E]">Paso 1 de 3</span>
+          <span className="text-sm font-medium text-[#0F2D5E]">Paso 1 de 7</span>
           <span className="text-sm text-[#64748B]">Información de la empresa</span>
         </div>
         <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-[#00C896] transition-all"
-            style={{ width: '33%' }}
+            style={{ width: '14%' }}
           />
         </div>
       </div>
@@ -137,8 +93,8 @@ export default function EmpresaPage() {
             <Input
               id="nombre"
               placeholder="Ej. Distribuidora González S.A. de C.V."
-              value={form.nombre_razon_social}
-              onChange={(e) => handleChange('nombre_razon_social', e.target.value)}
+              value={form.nombreRazonSocial}
+              onChange={(e) => handleChange('nombreRazonSocial', e.target.value)}
               required
               disabled={loading}
               className="h-11"
@@ -211,8 +167,8 @@ export default function EmpresaPage() {
               Tamaño de empresa
             </Label>
             <Select
-              value={form.tamano_empresa}
-              onValueChange={(v) => handleChange('tamano_empresa', v)}
+              value={form.tamanoEmpresa}
+              onValueChange={(v) => handleChange('tamanoEmpresa', v)}
               disabled={loading}
               required
             >
@@ -238,7 +194,7 @@ export default function EmpresaPage() {
           <Button
             type="submit"
             className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium mt-2"
-            disabled={loading || !form.nombre_razon_social || !form.industria || !form.tamano_empresa}
+            disabled={loading || !form.nombreRazonSocial || !form.industria || !form.tamanoEmpresa}
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

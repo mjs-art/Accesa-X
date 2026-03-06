@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { getOnboardingSummaryAction } from '@/app/actions/onboarding'
+import { getDashboardDataAction, signOutAction, syncSatDataAction } from '@/app/actions/dashboard'
+import type { DashboardCompany, Resumen, Cliente } from '@/features/dashboard/types/dashboard.types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,25 +38,11 @@ import {
   Bug,
 } from 'lucide-react'
 
-interface Company {
-  id: string
-  nombre_razon_social: string
-  rfc: string
-  syntage_validated_at: string | null
-}
-
-interface Resumen {
-  totalFacturado: number
-  clientesUnicos: number
-  facturasEmitidas: number
-}
-
-interface Cliente {
-  rfc: string
-  nombre: string
-  totalFacturado: number
-  facturas: number
-  ultimaFactura: string
+const DOC_LABELS: Record<string, string> = {
+  acta_constitutiva: 'Acta constitutiva',
+  actas_asamblea: 'Actas de asamblea',
+  documento_poderes: 'Poderes notariales',
+  estado_cuenta_bancario: 'Estado de cuenta bancario',
 }
 
 function formatMXN(amount: number) {
@@ -76,39 +64,39 @@ function formatDate(dateStr: string) {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const supabase = createClient()
 
-  const [company, setCompany] = useState<Company | null>(null)
+  const [company, setCompany] = useState<DashboardCompany | null>(null)
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [profileSummary, setProfileSummary] = useState<{
+    satVerificado: boolean
+    legalRepRegistrado: boolean
+    accionistasRegistrados: boolean
+    documentosCargados: boolean
+    documentosFaltantes: string[]
+  } | null>(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const [dashResult, summaryResult] = await Promise.all([
+        getDashboardDataAction(),
+        getOnboardingSummaryAction(),
+      ])
 
-      // Cargar empresa
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('id, nombre_razon_social, rfc, syntage_validated_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+      if ('data' in dashResult && dashResult.data) {
+        setCompany(dashResult.data.company)
+        if (dashResult.data.verified) {
+          setResumen(dashResult.data.resumen)
+          setClientes(dashResult.data.clientes)
+        }
+      }
 
-      if (!companyData) { setLoadingData(false); return }
-      setCompany(companyData as unknown as Company)
-
-      // Cargar datos del SAT via edge function
-      const { data, error } = await supabase.functions.invoke('get-dashboard-data')
-
-      if (!error && data?.verified) {
-        setResumen(data.resumen)
-        setClientes(data.clientes ?? [])
+      if ('summary' in summaryResult && summaryResult.summary) {
+        setProfileSummary(summaryResult.summary)
       }
 
       setLoadingData(false)
@@ -116,31 +104,35 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  const isVerified = !!company?.syntage_validated_at
+  const isVerified = !!company?.syntageValidatedAt
   const hasData = resumen !== null
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    await signOutAction()
     router.push('/')
   }
 
   async function handleSync() {
     setSyncing(true)
     setSyncMsg(null)
-    const { error } = await supabase.functions.invoke('sync-sat-data')
-    if (error) {
-      setSyncMsg({ type: 'error', text: 'No se pudo sincronizar. Intenta de nuevo.' })
-    } else {
-      setSyncMsg({ type: 'success', text: 'Sincronización iniciada. Los datos se actualizarán en unos minutos.' })
-      // Recargar datos del dashboard
-      setLoadingData(true)
-      const { data } = await supabase.functions.invoke('get-dashboard-data')
-      if (data?.verified) {
-        setResumen(data.resumen)
-        setClientes(data.clientes ?? [])
-      }
-      setLoadingData(false)
+
+    const result = await syncSatDataAction()
+
+    if ('error' in result) {
+      setSyncMsg({ type: 'error', text: result.error })
+      setSyncing(false)
+      return
     }
+
+    setSyncMsg({ type: 'success', text: 'Sincronización iniciada. Los datos se actualizarán en unos minutos.' })
+
+    setLoadingData(true)
+    const dashResult = await getDashboardDataAction()
+    if ('data' in dashResult && dashResult.data?.verified) {
+      setResumen(dashResult.data.resumen)
+      setClientes(dashResult.data.clientes)
+    }
+    setLoadingData(false)
     setSyncing(false)
   }
 
@@ -156,7 +148,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             {company && (
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-[#0F172A]">{company.nombre_razon_social}</p>
+                <p className="text-sm font-semibold text-[#0F172A]">{company.nombreRazonSocial}</p>
                 <p className="text-xs text-[#64748B] font-mono">{company.rfc}</p>
               </div>
             )}
@@ -200,15 +192,10 @@ export default function DashboardPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                {!isVerified && (
-                  <>
-                    <DropdownMenuItem onClick={() => router.push('/dashboard/verificacion-fiscal')}>
-                      <CheckCircle2 className="mr-2 h-4 w-4 text-amber-500" />
-                      Verificar empresa
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Mi perfil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push('/dashboard/debug')}>
                   <Bug className="mr-2 h-4 w-4 text-slate-400" />
                   <span className="text-slate-500">Debug</span>
@@ -244,24 +231,38 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Banner verificación pendiente */}
-        {!isVerified && (
+        {/* Banner expediente incompleto */}
+        {profileSummary && (!profileSummary.satVerificado || !profileSummary.legalRepRegistrado || !profileSummary.accionistasRegistrados || !profileSummary.documentosCargados) && (
           <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-amber-800">
-                Tu empresa no está verificada con el SAT
+                Tu expediente está incompleto
               </p>
-              <p className="text-sm text-amber-700 mt-0.5">
-                Conecta tu CIEC para obtener tu análisis fiscal real y acceder a mejores condiciones de crédito.
+              <p className="text-sm text-amber-700 mt-1">
+                Tu solicitud <span className="font-semibold">no será evaluada</span> por un asesor hasta que completes:
               </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {!profileSummary.satVerificado && (
+                  <li className="text-sm text-amber-700">• Verificación fiscal (SAT)</li>
+                )}
+                {!profileSummary.legalRepRegistrado && (
+                  <li className="text-sm text-amber-700">• Representante legal</li>
+                )}
+                {!profileSummary.accionistasRegistrados && (
+                  <li className="text-sm text-amber-700">• Accionistas</li>
+                )}
+                {profileSummary.documentosFaltantes?.map((doc) => (
+                  <li key={doc} className="text-sm text-amber-700">• {DOC_LABELS[doc] ?? doc}</li>
+                ))}
+              </ul>
             </div>
             <Button
               size="sm"
               className="bg-amber-500 hover:bg-amber-600 text-white font-medium shrink-0"
-              onClick={() => router.push('/dashboard/verificacion-fiscal')}
+              onClick={() => router.push('/dashboard/perfil')}
             >
-              Verificar ahora
+              Completar
             </Button>
           </div>
         )}
@@ -420,7 +421,6 @@ export default function DashboardPage() {
   )
 }
 
-// Componente auxiliar para las cards de resumen
 function SummaryCard({
   title,
   icon,

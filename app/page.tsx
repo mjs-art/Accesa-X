@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getPostLoginRedirectAction } from '@/app/actions/dashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -58,15 +59,8 @@ export default function AuthPage() {
       return
     }
 
-    // Si ya tiene empresa registrada → dashboard, si no → onboarding
-    const { data: company } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('user_id', signInData.user.id)
-      .limit(1)
-      .single()
-
-    window.location.href = company ? '/dashboard' : '/onboarding/empresa'
+    const { redirect } = await getPostLoginRedirectAction(signInData.user.id)
+    window.location.href = redirect
   }
 
   async function handleRegister(e: React.FormEvent) {
