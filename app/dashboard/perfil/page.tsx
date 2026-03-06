@@ -50,14 +50,14 @@ function SectionHeader({
           : <AlertCircle className="h-4 w-4 text-amber-500" />
         }
       </div>
-      {!done && onComplete && (
+      {onComplete && (
         <Button
           size="sm"
           variant="outline"
           className="border-[#0F2D5E] text-[#0F2D5E] hover:bg-[#0F2D5E]/5 h-8 text-xs"
           onClick={onComplete}
         >
-          {completeLabel}
+          {done ? 'Editar' : completeLabel}
         </Button>
       )}
     </div>
@@ -164,7 +164,7 @@ export default function PerfilPage() {
             icon={<ShieldCheck className={`h-4 w-4 ${company?.syntageValidatedAt ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
             title="Verificación fiscal (SAT)"
             done={!!company?.syntageValidatedAt}
-            onComplete={() => router.push('/onboarding/verificacion-fiscal?from=perfil')}
+            onComplete={!company?.syntageValidatedAt ? () => router.push('/onboarding/verificacion-fiscal?from=perfil') : undefined}
             completeLabel="Conectar SAT"
           />
           {company?.syntageValidatedAt ? (
