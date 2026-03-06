@@ -310,13 +310,18 @@ function ShareholdersPageInner() {
                     />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-sm font-medium text-[#0F172A]">Ocupación</Label>
+                    <Label className="text-sm font-medium text-[#0F172A]">
+                      Ocupación<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
                     <Input
                       placeholder="Ej. Director General"
                       value={s.ocupacion ?? ''}
                       onChange={(e) => updateShareholder(index, 'ocupacion', e.target.value)}
                       className="h-11"
                     />
+                    {fieldErrors[index]?.ocupacion && (
+                      <p className="text-xs text-red-500">{fieldErrors[index].ocupacion}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-sm font-medium text-[#0F172A]">

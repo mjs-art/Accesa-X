@@ -51,6 +51,9 @@ export const shareholderSchema = z
       if (!data.email || data.email.trim() === '') {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Correo electrónico es requerido', path: ['email'] })
       }
+      if (!data.ocupacion || data.ocupacion.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ocupación es requerida', path: ['ocupacion'] })
+      }
     }
   })
 
