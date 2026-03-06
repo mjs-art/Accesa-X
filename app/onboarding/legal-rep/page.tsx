@@ -76,19 +76,36 @@ function LegalRepPageInner() {
   }, [])
 
   function handleChange(field: keyof LegalRepFormData, value: string | boolean) {
-    if (field === 'esElUsuario' && value === true) {
-      // Auto-fill with saved data + user email when user marks themselves as the legal rep
-      setForm((prev) => ({
-        ...prev,
-        esElUsuario: true,
-        nombres: prev.nombres || savedLegalRep?.nombres || '',
-        apellidoPaterno: prev.apellidoPaterno || savedLegalRep?.apellidoPaterno || '',
-        apellidoMaterno: prev.apellidoMaterno || savedLegalRep?.apellidoMaterno || '',
-        curp: prev.curp || savedLegalRep?.curp || '',
-        rfcPersonal: prev.rfcPersonal || savedLegalRep?.rfcPersonal || '',
-        email: prev.email || userEmail || savedLegalRep?.email || '',
-        telefono: prev.telefono || (savedLegalRep?.telefono ? savedLegalRep.telefono.replace(/^\+52/, '') : ''),
-      }))
+    if (field === 'esElUsuario') {
+      if (value === true) {
+        // Auto-fill: email from auth account, other fields from previously saved data if any
+        setForm((prev) => ({
+          ...prev,
+          esElUsuario: true,
+          nombres: savedLegalRep?.nombres ?? prev.nombres ?? '',
+          apellidoPaterno: savedLegalRep?.apellidoPaterno ?? prev.apellidoPaterno ?? '',
+          apellidoMaterno: savedLegalRep?.apellidoMaterno ?? prev.apellidoMaterno ?? '',
+          curp: savedLegalRep?.curp ?? prev.curp ?? '',
+          rfcPersonal: savedLegalRep?.rfcPersonal ?? prev.rfcPersonal ?? '',
+          email: userEmail ?? savedLegalRep?.email ?? prev.email ?? '',
+          telefono: savedLegalRep?.telefono
+            ? savedLegalRep.telefono.replace(/^\+52/, '')
+            : (prev.telefono ?? ''),
+        }))
+      } else {
+        // Clear all personal fields when unchecking
+        setForm((prev) => ({
+          ...prev,
+          esElUsuario: false,
+          nombres: '',
+          apellidoPaterno: '',
+          apellidoMaterno: '',
+          curp: '',
+          rfcPersonal: '',
+          email: '',
+          telefono: '',
+        }))
+      }
       setFieldErrors({})
       setError(null)
       return
