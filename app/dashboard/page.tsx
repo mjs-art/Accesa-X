@@ -119,7 +119,7 @@ export default function DashboardPage() {
     const result = await syncSatDataAction()
 
     if ('error' in result) {
-      setSyncMsg({ type: 'error', text: result.error })
+      setSyncMsg({ type: 'error', text: result.error ?? 'Error desconocido' })
       setSyncing(false)
       return
     }

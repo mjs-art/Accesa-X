@@ -54,7 +54,7 @@ export default function VerificacionFiscalDashboardPage() {
 
     if ('error' in result) {
       setEstado('error')
-      setErrorMsg(result.error)
+      setErrorMsg(result.error ?? null)
       return
     }
 
