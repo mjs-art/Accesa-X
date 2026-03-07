@@ -48,7 +48,7 @@ export default function AdminPage() {
   async function fetchAll() {
     setLoading(true)
     const result = await getApplicationsAction()
-    if ('applications' in result) setApplications(result.applications)
+    if ('applications' in result) setApplications(result.applications ?? [])
     setLoading(false)
   }
 

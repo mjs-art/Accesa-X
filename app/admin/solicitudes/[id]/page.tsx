@@ -88,14 +88,14 @@ export default function AdminSolicitudPage() {
       getApplicationWithDetailsAction(id),
       getNotesAction(id),
     ])
-    if ('application' in appResult) setApp(appResult.application)
-    if ('notes' in notesResult) setNotes(notesResult.notes)
+    if ('application' in appResult) setApp(appResult.application ?? null)
+    if ('notes' in notesResult) setNotes(notesResult.notes ?? [])
     setLoading(false)
   }
 
   async function refreshNotes() {
     const result = await getNotesAction(id)
-    if ('notes' in result) setNotes(result.notes)
+    if ('notes' in result) setNotes(result.notes ?? [])
   }
 
   async function changeStatus(newStatus: 'en_revision' | 'aprobado' | 'rechazado', auditText: string) {
