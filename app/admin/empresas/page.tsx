@@ -43,7 +43,7 @@ export default function AdminEmpresasPage() {
   async function fetchAll() {
     setLoading(true)
     const result = await getAdminCompaniesAction()
-    if ('companies' in result) setCompanies(result.companies)
+    if ('companies' in result) setCompanies(result.companies ?? [])
     setLoading(false)
   }
 
