@@ -90,6 +90,36 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Guard de onboarding: evitar saltar pasos navegando por URL
+  if (user && pathname.startsWith('/onboarding') && !pathname.startsWith('/onboarding/invitado')) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('onboarding_completed, onboarding_step')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+
+    if (company?.onboarding_completed) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    if (company) {
+      const stepOrder: OnboardingStep[] = [
+        'empresa', 'verificacion-fiscal', 'legal-rep', 'legal-rep-docs',
+        'shareholders', 'company-docs', 'confirmation',
+      ]
+      const currentStep = (company.onboarding_step as OnboardingStep) ?? 'empresa'
+      const currentIndex = stepOrder.indexOf(currentStep)
+      const requestedStep = (Object.entries(STEP_PATHS) as [OnboardingStep, string][])
+        .find(([, path]) => pathname === path)?.[0]
+      const requestedIndex = requestedStep ? stepOrder.indexOf(requestedStep) : -1
+
+      if (requestedIndex > currentIndex) {
+        return NextResponse.redirect(new URL(STEP_PATHS[currentStep], request.url))
+      }
+    }
+  }
+
   // Guard de onboarding: usuarios autenticados en /dashboard deben tener onboarding completo
   if (user && pathname.startsWith('/dashboard')) {
     const { data: company } = await supabase

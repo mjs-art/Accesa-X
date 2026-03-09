@@ -158,6 +158,44 @@ export async function submitCreditApplicationAction(input: SubmitCreditApplicati
   return { success: true }
 }
 
+export interface CreditApplicationSummary {
+  id: string
+  tipoCredito: string
+  montoSolicitado: number
+  plazoMeses: number | null
+  status: string
+  createdAt: string
+}
+
+export async function getCreditApplicationsAction(): Promise<{ applications: CreditApplicationSummary[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const companyRepo = new SupabaseCompanyRepository(supabase)
+  const company = await companyRepo.findByUserId(user.id)
+  if (!company) return { error: 'Empresa no encontrada' }
+
+  const { data } = await supabase
+    .from('credit_applications')
+    .select('id, tipo_credito, monto_solicitado, plazo_meses, status, created_at')
+    .eq('company_id', company.id)
+    .gt('monto_solicitado', 0)
+    .order('created_at', { ascending: false })
+
+  const rows = (data ?? []) as Record<string, unknown>[]
+  return {
+    applications: rows.map((r) => ({
+      id: r.id as string,
+      tipoCredito: r.tipo_credito as string,
+      montoSolicitado: r.monto_solicitado as number,
+      plazoMeses: r.plazo_meses as number | null,
+      status: r.status as string,
+      createdAt: r.created_at as string,
+    })),
+  }
+}
+
 export async function debugResetSyntageAction() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

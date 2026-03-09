@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getOnboardingSummaryAction } from '@/app/actions/onboarding'
-import { getDashboardDataAction, signOutAction, syncSatDataAction } from '@/app/actions/dashboard'
+import { getDashboardDataAction, signOutAction, syncSatDataAction, getCreditApplicationsAction } from '@/app/actions/dashboard'
 import type { DashboardCompany, Resumen, Cliente } from '@/features/dashboard/types/dashboard.types'
+import type { CreditApplicationSummary } from '@/app/actions/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ import {
   LogOut,
   User,
   Bug,
+  CreditCard,
 } from 'lucide-react'
 
 const DOC_LABELS: Record<string, string> = {
@@ -68,6 +70,7 @@ export default function DashboardPage() {
   const [company, setCompany] = useState<DashboardCompany | null>(null)
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [applications, setApplications] = useState<CreditApplicationSummary[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -82,9 +85,10 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function load() {
-      const [dashResult, summaryResult] = await Promise.all([
+      const [dashResult, summaryResult, appsResult] = await Promise.all([
         getDashboardDataAction(),
         getOnboardingSummaryAction(),
+        getCreditApplicationsAction(),
       ])
 
       if ('data' in dashResult && dashResult.data) {
@@ -97,6 +101,10 @@ export default function DashboardPage() {
 
       if ('summary' in summaryResult && summaryResult.summary) {
         setProfileSummary(summaryResult.summary)
+      }
+
+      if ('applications' in appsResult) {
+        setApplications(appsResult.applications)
       }
 
       setLoadingData(false)
@@ -337,6 +345,71 @@ export default function DashboardPage() {
           </SummaryCard>
         </div>
 
+        {/* Mis Solicitudes de Crédito */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold text-[#0F172A]">
+              Mis Solicitudes de Crédito
+            </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => router.push('/solicitar-credito')}
+              className="bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
+            >
+              <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+              Nueva solicitud
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+              </div>
+            ) : applications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+                <InboxIcon className="h-10 w-10 text-slate-300 mb-3" />
+                <p className="text-sm font-medium text-[#0F172A]">Sin solicitudes aún</p>
+                <p className="text-xs text-[#64748B] mt-1">
+                  Solicita tu primer crédito empresarial, factoraje o por contrato.
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Tipo</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#64748B]">Monto</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#64748B]">Plazo</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#64748B]">Estatus</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#64748B] pr-6">Fecha</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {applications.map((app) => (
+                    <TableRow key={app.id} className="hover:bg-slate-50/60">
+                      <TableCell className="font-medium text-[#0F172A] pl-6 capitalize">
+                        {app.tipoCredito === 'empresarial' ? 'Empresarial' : app.tipoCredito === 'factoraje' ? 'Factoraje' : 'Por contrato'}
+                      </TableCell>
+                      <TableCell className="text-[#0F172A]">
+                        {formatMXN(app.montoSolicitado)}
+                      </TableCell>
+                      <TableCell className="text-[#64748B]">
+                        {app.plazoMeses ? `${app.plazoMeses} meses` : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <CreditAppStatusBadge status={app.status} />
+                      </TableCell>
+                      <TableCell className="text-[#64748B] pr-6">
+                        {formatDate(app.createdAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Tabla de clientes */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
@@ -418,6 +491,22 @@ export default function DashboardPage() {
         </Card>
       </main>
     </div>
+  )
+}
+
+const CREDIT_STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
+  submitted:   { label: 'En revisión',  classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  en_revision: { label: 'En revisión', classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  aprobado:    { label: 'Aprobado',     classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  rechazado:   { label: 'Rechazado',    classes: 'bg-red-50 text-red-700 border-red-200' },
+}
+
+function CreditAppStatusBadge({ status }: { status: string }) {
+  const cfg = CREDIT_STATUS_CONFIG[status] ?? { label: status, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.classes}`}>
+      {cfg.label}
+    </span>
   )
 }
 
