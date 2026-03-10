@@ -67,7 +67,7 @@ function ConfirmationPageInner() {
   if (loadingInit) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -89,11 +89,11 @@ function ConfirmationPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 7 de 7</span>
-            <span className="text-sm text-[#64748B]">Confirmación</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 7 de 7</span>
+            <span className="text-sm text-[#6B7280]">Confirmación</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#00C896] transition-all" style={{ width: '100%' }} />
+            <div className="h-full rounded-full bg-[#3CBEDB] transition-all" style={{ width: '100%' }} />
           </div>
         </div>
       )}
@@ -104,14 +104,14 @@ function ConfirmationPageInner() {
         <div className="text-center mb-8">
           <div className={`inline-flex items-center justify-center h-14 w-14 rounded-full mb-4 ${allComplete ? 'bg-emerald-50' : 'bg-amber-50'}`}>
             {allComplete
-              ? <CheckCircle2 className="h-7 w-7 text-[#00C896]" />
+              ? <CheckCircle2 className="h-7 w-7 text-[#3CBEDB]" />
               : <AlertCircle className="h-7 w-7 text-amber-500" />
             }
           </div>
-          <h1 className="text-xl font-semibold text-[#0F172A]">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">
             {allComplete ? 'Todo listo para enviar' : 'Resumen de tu solicitud'}
           </h1>
-          <p className="text-sm text-[#64748B] mt-1 max-w-sm mx-auto">
+          <p className="text-sm text-[#6B7280] mt-1 max-w-sm mx-auto">
             {allComplete
               ? 'Revisa el resumen y envíala para iniciar el proceso de evaluación.'
               : `Completaste ${pendingCount} de 4 secciones. Puedes enviar ahora o regresar a completar lo pendiente.`
@@ -123,21 +123,21 @@ function ConfirmationPageInner() {
         <div className="bg-slate-50 rounded-xl border border-slate-200 divide-y divide-slate-200 mb-8">
           {/* Empresa — siempre completa si llegaron aquí */}
           <div className="flex items-center gap-3 px-5 py-3.5">
-            <Building2 className="h-4 w-4 text-[#0F2D5E] shrink-0" />
+            <Building2 className="h-4 w-4 text-[#1A1A1A] shrink-0" />
             <div className="flex-1 flex items-center justify-between gap-4">
-              <span className="text-sm text-[#64748B]">Empresa</span>
+              <span className="text-sm text-[#6B7280]">Empresa</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#0F172A] text-right">{summary!.companyName}</span>
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#00C896] shrink-0" />
+                <span className="text-sm font-medium text-[#1A1A1A] text-right">{summary!.companyName}</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#3CBEDB] shrink-0" />
               </div>
             </div>
           </div>
 
           {/* Verificación fiscal */}
           <div className="flex items-center gap-3 px-5 py-3.5">
-            <ShieldCheck className={`h-4 w-4 shrink-0 ${summary!.satVerificado ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />
+            <ShieldCheck className={`h-4 w-4 shrink-0 ${summary!.satVerificado ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />
             <div className="flex-1 flex items-center justify-between gap-4">
-              <span className="text-sm text-[#64748B]">Verificación fiscal (SAT)</span>
+              <span className="text-sm text-[#6B7280]">Verificación fiscal (SAT)</span>
               <div className="flex items-center gap-1.5">
                 <StatusBadge
                   done={summary!.satVerificado}
@@ -145,7 +145,7 @@ function ConfirmationPageInner() {
                   skipLabel="Omitida"
                 />
                 {summary!.satVerificado
-                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#00C896] shrink-0" />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#3CBEDB] shrink-0" />
                   : <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 }
               </div>
@@ -154,9 +154,9 @@ function ConfirmationPageInner() {
 
           {/* Representante legal */}
           <div className="flex items-center gap-3 px-5 py-3.5">
-            <Users className={`h-4 w-4 shrink-0 ${summary!.legalRepRegistrado ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />
+            <Users className={`h-4 w-4 shrink-0 ${summary!.legalRepRegistrado ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />
             <div className="flex-1 flex items-center justify-between gap-4">
-              <span className="text-sm text-[#64748B]">Representante legal</span>
+              <span className="text-sm text-[#6B7280]">Representante legal</span>
               <div className="flex items-center gap-1.5">
                 <StatusBadge
                   done={summary!.legalRepRegistrado}
@@ -164,7 +164,7 @@ function ConfirmationPageInner() {
                   skipLabel="Omitido"
                 />
                 {summary!.legalRepRegistrado
-                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#00C896] shrink-0" />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#3CBEDB] shrink-0" />
                   : <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 }
               </div>
@@ -173,9 +173,9 @@ function ConfirmationPageInner() {
 
           {/* Accionistas */}
           <div className="flex items-center gap-3 px-5 py-3.5">
-            <Users className={`h-4 w-4 shrink-0 ${summary!.accionistasRegistrados ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />
+            <Users className={`h-4 w-4 shrink-0 ${summary!.accionistasRegistrados ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />
             <div className="flex-1 flex items-center justify-between gap-4">
-              <span className="text-sm text-[#64748B]">Accionistas</span>
+              <span className="text-sm text-[#6B7280]">Accionistas</span>
               <div className="flex items-center gap-1.5">
                 <StatusBadge
                   done={summary!.accionistasRegistrados}
@@ -183,7 +183,7 @@ function ConfirmationPageInner() {
                   skipLabel="Omitidos"
                 />
                 {summary!.accionistasRegistrados
-                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#00C896] shrink-0" />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#3CBEDB] shrink-0" />
                   : <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 }
               </div>
@@ -192,9 +192,9 @@ function ConfirmationPageInner() {
 
           {/* Documentos */}
           <div className="flex items-center gap-3 px-5 py-3.5">
-            <FileText className={`h-4 w-4 shrink-0 ${summary!.documentosCargados ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />
+            <FileText className={`h-4 w-4 shrink-0 ${summary!.documentosCargados ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />
             <div className="flex-1 flex items-center justify-between gap-4">
-              <span className="text-sm text-[#64748B]">Documentos</span>
+              <span className="text-sm text-[#6B7280]">Documentos</span>
               <div className="flex items-center gap-1.5">
                 <StatusBadge
                   done={summary!.documentosCargados}
@@ -202,7 +202,7 @@ function ConfirmationPageInner() {
                   skipLabel="Omitidos"
                 />
                 {summary!.documentosCargados
-                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#00C896] shrink-0" />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-[#3CBEDB] shrink-0" />
                   : <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 }
               </div>
@@ -237,7 +237,7 @@ function ConfirmationPageInner() {
         <Button
           onClick={handleComplete}
           disabled={submitting}
-          className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
+          className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
         >
           {submitting ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

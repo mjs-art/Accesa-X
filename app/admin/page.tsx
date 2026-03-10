@@ -67,27 +67,27 @@ export default function AdminPage() {
     <div className="px-8 py-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">Solicitudes de crédito</h1>
-        <p className="text-sm text-[#64748B] mt-0.5">{applications.length} solicitudes en total</p>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Solicitudes de crédito</h1>
+        <p className="text-sm text-[#6B7280] mt-0.5">{applications.length} solicitudes en total</p>
       </div>
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
           <input
             type="text"
             placeholder="Buscar empresa o RFC..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-9 pr-4 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E] w-64"
+            className="h-9 pl-9 pr-4 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB] w-64"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E]"
+          className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
         >
           <option value="">Todos los estatus</option>
           <option value="submitted">En revisión</option>
@@ -99,7 +99,7 @@ export default function AdminPage() {
         <select
           value={tipoFilter}
           onChange={(e) => setTipoFilter(e.target.value)}
-          className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E]"
+          className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
         >
           <option value="">Todos los tipos</option>
           <option value="empresarial">Empresarial</option>
@@ -110,7 +110,7 @@ export default function AdminPage() {
         {(search || statusFilter || tipoFilter) && (
           <button
             onClick={() => { setSearch(''); setStatusFilter(''); setTipoFilter('') }}
-            className="h-9 px-3 text-sm text-[#64748B] hover:text-[#0F172A] border border-slate-200 rounded-lg bg-white"
+            className="h-9 px-3 text-sm text-[#6B7280] hover:text-[#1A1A1A] border border-slate-200 rounded-lg bg-white"
           >
             Limpiar
           </button>
@@ -121,22 +121,22 @@ export default function AdminPage() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-[#64748B]" />
+            <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-sm text-[#64748B]">No hay solicitudes que coincidan.</p>
+            <p className="text-sm text-[#6B7280]">No hay solicitudes que coincidan.</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
-                <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Empresa</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Tipo</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Monto</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Plazo</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Estatus</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Fecha</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Empresa</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Tipo</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Monto</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Plazo</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Estatus</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Fecha</TableHead>
                 <TableHead className="pr-6" />
               </TableRow>
             </TableHeader>
@@ -147,30 +147,30 @@ export default function AdminPage() {
                 return (
                   <TableRow key={a.id} className="hover:bg-slate-50/60">
                     <TableCell className="pl-6">
-                      <p className="text-sm font-medium text-[#0F172A]">{a.company?.nombreRazonSocial ?? '—'}</p>
-                      <p className="text-xs text-[#64748B] font-mono">{a.company?.rfc ?? '—'}</p>
+                      <p className="text-sm font-medium text-[#1A1A1A]">{a.company?.nombreRazonSocial ?? '—'}</p>
+                      <p className="text-xs text-[#6B7280] font-mono">{a.company?.rfc ?? '—'}</p>
                     </TableCell>
                     <TableCell>
                       <Badge className={`${tipoCfg.classes} border text-xs px-2 py-0.5 font-medium`}>
                         {tipoCfg.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm font-semibold text-[#0F172A]">
+                    <TableCell className="text-sm font-semibold text-[#1A1A1A]">
                       {formatMXN(a.montoSolicitado)}
                     </TableCell>
-                    <TableCell className="text-sm text-[#64748B]">{a.plazoMeses} meses</TableCell>
+                    <TableCell className="text-sm text-[#6B7280]">{a.plazoMeses} meses</TableCell>
                     <TableCell>
                       <Badge className={`${statusCfg.classes} border text-xs px-2 py-0.5 font-medium`}>
                         {statusCfg.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-[#64748B]">{formatDate(a.createdAt)}</TableCell>
+                    <TableCell className="text-sm text-[#6B7280]">{formatDate(a.createdAt)}</TableCell>
                     <TableCell className="pr-6">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => router.push(`/admin/solicitudes/${a.id}`)}
-                        className="text-[#0F2D5E] hover:bg-[#0F2D5E]/5 font-medium"
+                        className="text-[#1A1A1A] hover:bg-[#3CBEDB]/5 font-medium"
                       >
                         Ver detalle
                         <ChevronRight className="ml-1 h-3.5 w-3.5" />

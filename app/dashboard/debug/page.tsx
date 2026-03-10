@@ -29,17 +29,17 @@ export default function DebugPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+            className="text-[#6B7280] hover:text-[#1A1A1A] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
           <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
             DEBUG
@@ -49,8 +49,8 @@ export default function DebugPage() {
 
       <main className="max-w-2xl mx-auto px-6 py-10 space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-[#0F172A]">Herramientas de desarrollo</h1>
-          <p className="text-sm text-[#64748B] mt-1">Solo visible en modo debug. No usar en producción.</p>
+          <h1 className="text-xl font-bold text-[#1A1A1A]">Herramientas de desarrollo</h1>
+          <p className="text-sm text-[#6B7280] mt-1">Solo visible en modo debug. No usar en producción.</p>
         </div>
 
         {/* Reset Syntage */}
@@ -60,10 +60,10 @@ export default function DebugPage() {
               <Trash2 className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-[#0F172A]">Reset Syntage</h2>
-              <p className="text-sm text-[#64748B] mt-0.5">
+              <h2 className="text-sm font-semibold text-[#1A1A1A]">Reset Syntage</h2>
+              <p className="text-sm text-[#6B7280] mt-0.5">
                 Elimina las credenciales de tu RFC en Syntage y deja tu cuenta en Supabase
-                como <span className="font-medium text-[#0F172A]">no verificada</span>.
+                como <span className="font-medium text-[#1A1A1A]">no verificada</span>.
                 Tu empresa, contratos y solicitudes se conservan.
               </p>
             </div>
@@ -128,7 +128,7 @@ export default function DebugPage() {
               {result.success && (
                 <Button
                   size="sm"
-                  className="mt-2 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white"
+                  className="mt-2 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white"
                   onClick={() => router.push('/dashboard')}
                 >
                   Ir al dashboard

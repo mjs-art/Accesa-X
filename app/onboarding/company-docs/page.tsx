@@ -137,7 +137,7 @@ function CompanyDocsPageInner() {
   if (loadingInit) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -147,11 +147,11 @@ function CompanyDocsPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 6 de 7</span>
-            <span className="text-sm text-[#64748B]">Documentos de la empresa</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 6 de 7</span>
+            <span className="text-sm text-[#6B7280]">Documentos de la empresa</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#00C896] transition-all" style={{ width: '85%' }} />
+            <div className="h-full rounded-full bg-[#3CBEDB] transition-all" style={{ width: '85%' }} />
           </div>
         </div>
       )}
@@ -159,8 +159,8 @@ function CompanyDocsPageInner() {
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-8 pt-8 pb-4">
-          <h1 className="text-xl font-semibold text-[#0F172A]">Documentos de la empresa</h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">Documentos de la empresa</h1>
+          <p className="text-sm text-[#6B7280] mt-1">
             Sube los documentos corporativos requeridos. Los opcionales pueden enviarse después.
           </p>
         </div>
@@ -181,21 +181,21 @@ function CompanyDocsPageInner() {
                   <div className="flex items-center gap-3">
                     <span
                       className={`h-2 w-2 rounded-full shrink-0 ${
-                        isDone ? 'bg-[#00C896]' : doc.required ? 'bg-amber-400' : 'bg-slate-300'
+                        isDone ? 'bg-[#3CBEDB]' : doc.required ? 'bg-amber-400' : 'bg-slate-300'
                       }`}
                     />
                     <div>
-                      <p className="text-sm font-medium text-[#0F172A]">
+                      <p className="text-sm font-medium text-[#1A1A1A]">
                         {doc.label}
                         {doc.required && (
                           <span className="ml-1.5 text-xs text-amber-600 font-normal">Requerido</span>
                         )}
                       </p>
-                      <p className="text-xs text-[#64748B]">{doc.description}</p>
+                      <p className="text-xs text-[#6B7280]">{doc.description}</p>
                     </div>
                   </div>
                   <ChevronDown
-                    className={`h-4 w-4 text-[#64748B] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`h-4 w-4 text-[#6B7280] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
 
@@ -243,14 +243,14 @@ function CompanyDocsPageInner() {
           <Button
             onClick={handleContinue}
             disabled={!allRequiredUploaded || submitting}
-            className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+            className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
           >
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continuar'}
           </Button>
 
           <Button
             variant="ghost"
-            className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+            className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
             disabled={submitting}
             onClick={async () => {
               if (companyId) await advanceToStepAction(companyId, 'confirmation')

@@ -247,10 +247,10 @@ export default function ClientePage() {
       {/* Overlay de análisis */}
       {analyzing && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-5">
-          <div className="h-14 w-14 rounded-full border-4 border-[#0F2D5E]/10 border-t-[#0F2D5E] animate-spin" />
+          <div className="h-14 w-14 rounded-full border-4 border-[#3CBEDB]/10 border-t-[#3CBEDB] animate-spin" />
           <div className="text-center space-y-1">
-            <p className="text-base font-semibold text-[#0F172A]">Analizando con Claude...</p>
-            <p className="text-sm text-[#64748B]">Leyendo el contrato, un momento</p>
+            <p className="text-base font-semibold text-[#1A1A1A]">Analizando con Claude...</p>
+            <p className="text-sm text-[#6B7280]">Leyendo el contrato, un momento</p>
           </div>
         </div>
       )}
@@ -262,14 +262,14 @@ export default function ClientePage() {
             variant="ghost"
             size="sm"
             onClick={() => router.push('/dashboard')}
-            className="text-[#64748B] hover:text-[#0F2D5E] -ml-2"
+            className="text-[#6B7280] hover:text-[#1A1A1A] -ml-2"
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             Volver
           </Button>
           <div className="h-4 w-px bg-slate-200" />
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
         </div>
       </header>
@@ -277,14 +277,14 @@ export default function ClientePage() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
 
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">{clienteNombre}</h1>
-          <p className="text-sm text-[#64748B] mt-0.5">Contratos y documentos</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">{clienteNombre}</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">Contratos y documentos</p>
         </div>
 
         {/* Zona drag & drop */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">Subir contrato</CardTitle>
+            <CardTitle className="text-base font-semibold text-[#1A1A1A]">Subir contrato</CardTitle>
           </CardHeader>
           <CardContent>
             <div
@@ -294,24 +294,24 @@ export default function ClientePage() {
               onClick={() => !uploading && inputRef.current?.click()}
               className={`
                 border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all
-                ${dragOver ? 'border-[#00C896] bg-emerald-50' : 'border-slate-300 hover:border-[#0F2D5E] hover:bg-slate-50'}
+                ${dragOver ? 'border-[#3CBEDB] bg-emerald-50' : 'border-slate-300 hover:border-[#3CBEDB] hover:bg-slate-50'}
                 ${uploading ? 'pointer-events-none opacity-60' : ''}
               `}
             >
               {uploading ? (
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#0F2D5E]" />
-                  <p className="text-sm font-medium text-[#0F2D5E]">Subiendo archivo…</p>
+                  <Loader2 className="h-10 w-10 animate-spin text-[#1A1A1A]" />
+                  <p className="text-sm font-medium text-[#1A1A1A]">Subiendo archivo…</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <UploadCloud className={`h-10 w-10 ${dragOver ? 'text-[#00C896]' : 'text-slate-400'}`} />
+                  <UploadCloud className={`h-10 w-10 ${dragOver ? 'text-[#3CBEDB]' : 'text-slate-400'}`} />
                   <div>
-                    <p className="text-sm font-medium text-[#0F172A]">
+                    <p className="text-sm font-medium text-[#1A1A1A]">
                       Arrastra tu PDF aquí o{' '}
-                      <span className="text-[#0F2D5E] underline">haz click para seleccionar</span>
+                      <span className="text-[#1A1A1A] underline">haz click para seleccionar</span>
                     </p>
-                    <p className="text-xs text-[#64748B] mt-1">Solo PDF · Máximo 50 MB</p>
+                    <p className="text-xs text-[#6B7280] mt-1">Solo PDF · Máximo 50 MB</p>
                   </div>
                 </div>
               )}
@@ -323,26 +323,26 @@ export default function ClientePage() {
         {/* Tabla de contratos */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">Contratos subidos</CardTitle>
+            <CardTitle className="text-base font-semibold text-[#1A1A1A]">Contratos subidos</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {loadingContratos ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-[#64748B]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
               </div>
             ) : contratos.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm text-[#64748B]">Aún no hay contratos subidos</p>
+                <p className="text-sm text-[#6B7280]">Aún no hay contratos subidos</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Archivo</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Fecha subida</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Estado</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B] pr-6" />
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Archivo</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Fecha subida</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Estado</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pr-6" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -350,13 +350,13 @@ export default function ClientePage() {
                     <TableRow key={c.id} className="hover:bg-slate-50/60">
                       <TableCell className="pl-6">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-[#64748B] shrink-0" />
-                          <span className="text-sm text-[#0F172A] font-medium truncate max-w-xs">
+                          <FileText className="h-4 w-4 text-[#6B7280] shrink-0" />
+                          <span className="text-sm text-[#1A1A1A] font-medium truncate max-w-xs">
                             {getFileName(c.storage_path)}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-[#64748B]">{formatDate(c.uploaded_at)}</TableCell>
+                      <TableCell className="text-sm text-[#6B7280]">{formatDate(c.uploaded_at)}</TableCell>
                       <TableCell><StatusBadge status={c.analysis_status} /></TableCell>
                       <TableCell className="pr-6">
                         {c.analysis_status === 'completed' && c.analysis_result && (
@@ -364,7 +364,7 @@ export default function ClientePage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push(`/dashboard/clientes/${id}/contratos/${c.id}`)}
-                            className="text-[#0F2D5E] hover:bg-[#0F2D5E]/5 font-medium"
+                            className="text-[#1A1A1A] hover:bg-[#3CBEDB]/5 font-medium"
                           >
                             <Eye className="mr-1.5 h-3.5 w-3.5" />
                             Ver análisis

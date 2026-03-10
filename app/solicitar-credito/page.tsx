@@ -54,9 +54,9 @@ function Stepper({ current }: { current: number }) {
             <div
               className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                 i < current
-                  ? 'bg-[#00C896] text-white'
+                  ? 'bg-[#3CBEDB] text-white'
                   : i === current
-                  ? 'bg-[#0F2D5E] text-white ring-4 ring-[#0F2D5E]/10'
+                  ? 'bg-[#3CBEDB] text-white ring-4 ring-[#3CBEDB]/10'
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
@@ -64,7 +64,7 @@ function Stepper({ current }: { current: number }) {
             </div>
             <span
               className={`text-xs font-medium whitespace-nowrap ${
-                i === current ? 'text-[#0F172A]' : 'text-[#64748B]'
+                i === current ? 'text-[#1A1A1A]' : 'text-[#6B7280]'
               }`}
             >
               {label}
@@ -73,7 +73,7 @@ function Stepper({ current }: { current: number }) {
           {i < steps.length - 1 && (
             <div
               className={`w-20 sm:w-28 h-px mt-4 mx-3 transition-all ${
-                i < current ? 'bg-[#00C896]' : 'bg-slate-200'
+                i < current ? 'bg-[#3CBEDB]' : 'bg-slate-200'
               }`}
             />
           )}
@@ -183,7 +183,7 @@ export default function SolicitarCreditoPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-4">
@@ -191,22 +191,22 @@ export default function SolicitarCreditoPage() {
             variant="ghost"
             size="sm"
             onClick={() => (step > 0 ? setStep(step - 1) : router.push('/dashboard'))}
-            className="text-[#64748B] hover:text-[#0F2D5E] -ml-2"
+            className="text-[#6B7280] hover:text-[#1A1A1A] -ml-2"
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             {step > 0 ? 'Anterior' : 'Volver'}
           </Button>
           <div className="h-4 w-px bg-slate-200" />
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-10">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-[#0F172A]">Solicitar crédito</h1>
-          <p className="text-sm text-[#64748B] mt-1">Completa los pasos para enviar tu solicitud</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Solicitar crédito</h1>
+          <p className="text-sm text-[#6B7280] mt-1">Completa los pasos para enviar tu solicitud</p>
         </div>
 
         <Stepper current={step} />
@@ -220,21 +220,21 @@ export default function SolicitarCreditoPage() {
                 onClick={() => setTipo(t.id)}
                 className={`w-full text-left rounded-2xl border-2 p-5 transition-all ${
                   tipo === t.id
-                    ? 'border-[#0F2D5E] bg-[#0F2D5E]/5 shadow-sm'
+                    ? 'border-[#3CBEDB] bg-[#3CBEDB]/5 shadow-sm'
                     : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <span className="text-3xl">{t.emoji}</span>
                   <div className="flex-1">
-                    <p className={`font-semibold text-base ${tipo === t.id ? 'text-[#0F2D5E]' : 'text-[#0F172A]'}`}>
+                    <p className={`font-semibold text-base ${tipo === t.id ? 'text-[#1A1A1A]' : 'text-[#1A1A1A]'}`}>
                       {t.titulo}
                     </p>
-                    <p className="text-sm text-[#64748B] mt-0.5">{t.descripcion}</p>
+                    <p className="text-sm text-[#6B7280] mt-0.5">{t.descripcion}</p>
                   </div>
                   <div
                     className={`h-5 w-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${
-                      tipo === t.id ? 'border-[#0F2D5E] bg-[#0F2D5E]' : 'border-slate-300'
+                      tipo === t.id ? 'border-[#3CBEDB] bg-[#3CBEDB]' : 'border-slate-300'
                     }`}
                   >
                     {tipo === t.id && <Check className="h-3 w-3 text-white" />}
@@ -246,7 +246,7 @@ export default function SolicitarCreditoPage() {
             <Button
               onClick={() => setStep(1)}
               disabled={!canGoNext()}
-              className="w-full h-11 mt-2 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+              className="w-full h-11 mt-2 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
             >
               Continuar
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -261,27 +261,27 @@ export default function SolicitarCreditoPage() {
 
               {/* Monto */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">Monto solicitado</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">Monto solicitado</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#64748B] font-medium">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#6B7280] font-medium">$</span>
                   <input
                     type="number"
                     min="0"
                     placeholder="500,000"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
-                    className="w-full h-11 pl-7 pr-16 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E]"
+                    className="w-full h-11 pl-7 pr-16 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#64748B]">MXN</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6B7280]">MXN</span>
                 </div>
                 {monto && !isNaN(parseFloat(monto)) && (
-                  <p className="text-xs text-[#64748B]">{formatMXN(monto)}</p>
+                  <p className="text-xs text-[#6B7280]">{formatMXN(monto)}</p>
                 )}
               </div>
 
               {/* Plazo */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#0F172A]">Plazo deseado</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">Plazo deseado</Label>
                 <div className="flex flex-wrap gap-2">
                   {PLAZOS.map((p) => (
                     <button
@@ -289,8 +289,8 @@ export default function SolicitarCreditoPage() {
                       onClick={() => setPlazo(String(p))}
                       className={`h-10 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
                         plazo === String(p)
-                          ? 'border-[#0F2D5E] bg-[#0F2D5E] text-white'
-                          : 'border-slate-200 bg-white text-[#0F172A] hover:border-slate-300'
+                          ? 'border-[#3CBEDB] bg-[#3CBEDB] text-white'
+                          : 'border-slate-200 bg-white text-[#1A1A1A] hover:border-slate-300'
                       }`}
                     >
                       {p} meses
@@ -302,11 +302,11 @@ export default function SolicitarCreditoPage() {
               {/* Contrato (solo si tipo = 'contrato') */}
               {tipo === 'contrato' && (
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-[#0F172A]">Contrato de respaldo</Label>
+                  <Label className="text-sm font-medium text-[#1A1A1A]">Contrato de respaldo</Label>
                   {loadingContratos ? (
                     <div className="flex items-center gap-2 h-11 px-3 border border-slate-200 rounded-lg bg-slate-50">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#64748B]" />
-                      <span className="text-sm text-[#64748B]">Cargando contratos...</span>
+                      <Loader2 className="h-4 w-4 animate-spin text-[#6B7280]" />
+                      <span className="text-sm text-[#6B7280]">Cargando contratos...</span>
                     </div>
                   ) : contratos.length === 0 ? (
                     <div className="h-11 px-3 flex items-center border border-amber-200 bg-amber-50 rounded-lg">
@@ -316,7 +316,7 @@ export default function SolicitarCreditoPage() {
                     <select
                       value={contractId}
                       onChange={(e) => setContractId(e.target.value)}
-                      className="w-full h-11 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E]"
+                      className="w-full h-11 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
                     >
                       <option value="">Selecciona un contrato...</option>
                       {contratos.map((c) => (
@@ -332,21 +332,21 @@ export default function SolicitarCreditoPage() {
 
               {/* Destino */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">Destino del crédito</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">Destino del crédito</Label>
                 <textarea
                   placeholder="¿Para qué usarás el dinero? Describe brevemente el destino del crédito..."
                   value={destino}
                   onChange={(e) => setDestino(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E] resize-none"
+                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB] resize-none"
                 />
-                <p className="text-xs text-[#64748B]">{destino.trim().length}/10 caracteres mínimo</p>
+                <p className="text-xs text-[#6B7280]">{destino.trim().length}/10 caracteres mínimo</p>
               </div>
 
               <Button
                 onClick={() => setStep(2)}
                 disabled={!canGoNext()}
-                className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+                className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
               >
                 Continuar
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -360,7 +360,7 @@ export default function SolicitarCreditoPage() {
           <div className="space-y-4">
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="pt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider">
+                <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">
                   Resumen de tu solicitud
                 </h3>
 
@@ -375,8 +375,8 @@ export default function SolicitarCreditoPage() {
                     />
                   )}
                   <div className="border-t border-slate-100 pt-3">
-                    <p className="text-xs font-medium text-[#64748B] mb-1">Destino del crédito</p>
-                    <p className="text-sm text-[#0F172A] leading-relaxed bg-slate-50 rounded-lg p-3">{destino}</p>
+                    <p className="text-xs font-medium text-[#6B7280] mb-1">Destino del crédito</p>
+                    <p className="text-sm text-[#1A1A1A] leading-relaxed bg-slate-50 rounded-lg p-3">{destino}</p>
                   </div>
                 </div>
               </CardContent>
@@ -388,9 +388,9 @@ export default function SolicitarCreditoPage() {
                 type="checkbox"
                 checked={confirmado}
                 onChange={(e) => setConfirmado(e.target.checked)}
-                className="h-4 w-4 mt-0.5 accent-[#0F2D5E] cursor-pointer"
+                className="h-4 w-4 mt-0.5 accent-[#3CBEDB] cursor-pointer"
               />
-              <span className="text-sm text-[#64748B] leading-relaxed">
+              <span className="text-sm text-[#6B7280] leading-relaxed">
                 Confirmo que la información proporcionada es correcta y autorizo a AccesaX a
                 procesar mi solicitud de crédito.
               </span>
@@ -399,7 +399,7 @@ export default function SolicitarCreditoPage() {
             <Button
               onClick={handleSubmit}
               disabled={!confirmado || submitting}
-              className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-semibold"
+              className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-semibold"
             >
               {submitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</>
@@ -418,8 +418,8 @@ export default function SolicitarCreditoPage() {
 function SummaryRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-sm text-[#64748B]">{label}</span>
-      <span className={`text-sm font-semibold ${highlight ? 'text-[#0F2D5E] text-base' : 'text-[#0F172A]'}`}>
+      <span className="text-sm text-[#6B7280]">{label}</span>
+      <span className={`text-sm font-semibold ${highlight ? 'text-[#1A1A1A] text-base' : 'text-[#1A1A1A]'}`}>
         {value}
       </span>
     </div>

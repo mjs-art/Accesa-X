@@ -105,7 +105,7 @@ function LegalRepDocsPageInner() {
   if (loadingInit) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -115,11 +115,11 @@ function LegalRepDocsPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 4 de 7</span>
-            <span className="text-sm text-[#64748B]">Documentos del representante</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 4 de 7</span>
+            <span className="text-sm text-[#6B7280]">Documentos del representante</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#00C896] transition-all" style={{ width: '57%' }} />
+            <div className="h-full rounded-full bg-[#3CBEDB] transition-all" style={{ width: '57%' }} />
           </div>
         </div>
       )}
@@ -127,8 +127,8 @@ function LegalRepDocsPageInner() {
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-[#0F172A]">Documentos del representante legal</h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">Documentos del representante legal</h1>
+          <p className="text-sm text-[#6B7280] mt-1">
             Sube la identificación oficial y el comprobante de domicilio del representante.
           </p>
         </div>
@@ -159,14 +159,14 @@ function LegalRepDocsPageInner() {
           <Button
             onClick={handleContinue}
             disabled={!allUploaded || submitting}
-            className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+            className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
           >
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continuar'}
           </Button>
 
           <Button
             variant="ghost"
-            className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+            className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
             disabled={submitting}
             onClick={async () => {
               if (companyId) await advanceToStepAction(companyId, 'shareholders')

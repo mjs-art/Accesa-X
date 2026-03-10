@@ -231,8 +231,8 @@ export default function DashboardPage() {
         {/* Título + CTA */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#0F172A]">Dashboard</h1>
-            <p className="text-sm text-[#64748B] mt-0.5">
+            <h1 className="text-2xl font-bold text-[#1A1A1A]">Dashboard</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">
               Resumen financiero de tu empresa
             </p>
           </div>
@@ -248,51 +248,51 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <SummaryCard
             title="Total facturado"
-            icon={<DollarSign className="h-4 w-4 text-[#00C896]" />}
+            icon={<DollarSign className="h-4 w-4 text-[#3CBEDB]" />}
             loading={loadingData}
             empty={!hasData}
             emptyText="Sin datos"
           >
             {resumen && (
               <>
-                <p className="text-2xl font-bold text-[#0F172A]">
+                <p className="text-2xl font-bold text-[#1A1A1A]">
                   {formatMXN(resumen.totalFacturado)}
                 </p>
-                <p className="text-xs text-[#64748B] mt-1">Últimos 12 meses</p>
+                <p className="text-xs text-[#6B7280] mt-1">Últimos 12 meses</p>
               </>
             )}
           </SummaryCard>
 
           <SummaryCard
             title="Clientes únicos"
-            icon={<Users className="h-4 w-4 text-[#00C896]" />}
+            icon={<Users className="h-4 w-4 text-[#3CBEDB]" />}
             loading={loadingData}
             empty={!hasData}
             emptyText="Sin datos"
           >
             {resumen && (
               <>
-                <p className="text-2xl font-bold text-[#0F172A]">
+                <p className="text-2xl font-bold text-[#1A1A1A]">
                   {resumen.clientesUnicos}
                 </p>
-                <p className="text-xs text-[#64748B] mt-1">Con al menos 1 factura</p>
+                <p className="text-xs text-[#6B7280] mt-1">Con al menos 1 factura</p>
               </>
             )}
           </SummaryCard>
 
           <SummaryCard
             title="Facturas emitidas"
-            icon={<FileText className="h-4 w-4 text-[#00C896]" />}
+            icon={<FileText className="h-4 w-4 text-[#3CBEDB]" />}
             loading={loadingData}
             empty={!hasData}
             emptyText="Sin datos"
           >
             {resumen && (
               <>
-                <p className="text-2xl font-bold text-[#0F172A]">
+                <p className="text-2xl font-bold text-[#1A1A1A]">
                   {resumen.facturasEmitidas}
                 </p>
-                <p className="text-xs text-[#64748B] mt-1">CFDI vigentes</p>
+                <p className="text-xs text-[#6B7280] mt-1">CFDI vigentes</p>
               </>
             )}
           </SummaryCard>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
         {/* Mis Solicitudes de Crédito */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold text-[#0F172A]">
+            <CardTitle className="text-base font-semibold text-[#1A1A1A]">
               Mis Solicitudes de Crédito
             </CardTitle>
             <Button
@@ -321,8 +321,8 @@ export default function DashboardPage() {
             ) : applications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-6">
                 <InboxIcon className="h-10 w-10 text-slate-300 mb-3" />
-                <p className="text-sm font-medium text-[#0F172A]">Sin solicitudes aún</p>
-                <p className="text-xs text-[#64748B] mt-1">
+                <p className="text-sm font-medium text-[#1A1A1A]">Sin solicitudes aún</p>
+                <p className="text-xs text-[#6B7280] mt-1">
                   Solicita tu primer crédito empresarial, factoraje o por contrato.
                 </p>
               </div>
@@ -330,29 +330,29 @@ export default function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Tipo</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Monto</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Plazo</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Estatus</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B] pr-6">Fecha</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Tipo</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Monto</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Plazo</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Estatus</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pr-6">Fecha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {applications.map((app) => (
                     <TableRow key={app.id} className="hover:bg-slate-50/60">
-                      <TableCell className="font-medium text-[#0F172A] pl-6 capitalize">
+                      <TableCell className="font-medium text-[#1A1A1A] pl-6 capitalize">
                         {app.tipoCredito === 'empresarial' ? 'Empresarial' : app.tipoCredito === 'factoraje' ? 'Factoraje' : 'Por contrato'}
                       </TableCell>
-                      <TableCell className="text-[#0F172A]">
+                      <TableCell className="text-[#1A1A1A]">
                         {formatMXN(app.montoSolicitado)}
                       </TableCell>
-                      <TableCell className="text-[#64748B]">
+                      <TableCell className="text-[#6B7280]">
                         {app.plazoMeses ? `${app.plazoMeses} meses` : '—'}
                       </TableCell>
                       <TableCell>
                         <CreditAppStatusBadge status={app.status} />
                       </TableCell>
-                      <TableCell className="text-[#64748B] pr-6">
+                      <TableCell className="text-[#6B7280] pr-6">
                         {formatDate(app.createdAt)}
                       </TableCell>
                     </TableRow>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
         {/* Tabla de clientes */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">
+            <CardTitle className="text-base font-semibold text-[#1A1A1A]">
               Mis Clientes
             </CardTitle>
           </CardHeader>
@@ -378,10 +378,10 @@ export default function DashboardPage() {
             ) : clientes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                 <InboxIcon className="h-10 w-10 text-slate-300 mb-3" />
-                <p className="text-sm font-medium text-[#0F172A]">
+                <p className="text-sm font-medium text-[#1A1A1A]">
                   {isVerified ? 'No hay facturas emitidas aún' : 'Conecta tu empresa con el SAT'}
                 </p>
-                <p className="text-xs text-[#64748B] mt-1 max-w-xs">
+                <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
                   {isVerified
                     ? 'Los clientes aparecerán aquí una vez que Syntage termine de extraer tus CFDI del SAT.'
                     : 'Verifica tu empresa para ver tus clientes y facturas reales.'}
@@ -389,7 +389,7 @@ export default function DashboardPage() {
                 {!isVerified && (
                   <Button
                     size="sm"
-                    className="mt-4 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white"
+                    className="mt-4 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white"
                     onClick={() => router.push('/dashboard/verificacion-fiscal')}
                   >
                     Verificar empresa
@@ -400,35 +400,35 @@ export default function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Cliente</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">RFC</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Total facturado</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Facturas</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B]">Última factura</TableHead>
-                    <TableHead className="text-xs font-semibold text-[#64748B] pr-6" />
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Cliente</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">RFC</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Total facturado</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Facturas</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280]">Última factura</TableHead>
+                    <TableHead className="text-xs font-semibold text-[#6B7280] pr-6" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clientes.map((cliente) => (
                     <TableRow key={cliente.rfc} className="hover:bg-slate-50/60">
-                      <TableCell className="font-medium text-[#0F172A] pl-6">
+                      <TableCell className="font-medium text-[#1A1A1A] pl-6">
                         {cliente.nombre}
                       </TableCell>
-                      <TableCell className="text-xs text-[#64748B] font-mono">
+                      <TableCell className="text-xs text-[#6B7280] font-mono">
                         {cliente.rfc}
                       </TableCell>
-                      <TableCell className="text-[#0F172A]">
+                      <TableCell className="text-[#1A1A1A]">
                         {formatMXN(cliente.totalFacturado)}
                       </TableCell>
-                      <TableCell className="text-[#64748B]">{cliente.facturas}</TableCell>
-                      <TableCell className="text-[#64748B]">
+                      <TableCell className="text-[#6B7280]">{cliente.facturas}</TableCell>
+                      <TableCell className="text-[#6B7280]">
                         {formatDate(cliente.ultimaFactura)}
                       </TableCell>
                       <TableCell className="pr-6">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-[#1A1A1A] hover:text-[#1A1A1A] hover:bg-[#0F2D5E]/5 font-medium"
+                          className="text-[#1A1A1A] hover:text-[#1A1A1A] hover:bg-[#3CBEDB]/5 font-medium"
                           onClick={() => router.push(`/dashboard/clientes/${encodeURIComponent(cliente.rfc)}?nombre=${encodeURIComponent(cliente.nombre)}`)}
                         >
                           Ver contratos
@@ -481,7 +481,7 @@ function SummaryCard({
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-[#64748B]">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-[#6B7280]">{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>

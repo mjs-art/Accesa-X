@@ -56,19 +56,19 @@ export default function AdminEmpresasPage() {
     <div className="px-8 py-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">Empresas</h1>
-        <p className="text-sm text-[#64748B] mt-0.5">{companies.length} empresas registradas</p>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Empresas</h1>
+        <p className="text-sm text-[#6B7280] mt-0.5">{companies.length} empresas registradas</p>
       </div>
 
       {/* Búsqueda */}
       <div className="relative w-72">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
         <input
           type="text"
           placeholder="Buscar por nombre o RFC..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-9 w-full pl-9 pr-4 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E]"
+          className="h-9 w-full pl-9 pr-4 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
         />
       </div>
 
@@ -76,22 +76,22 @@ export default function AdminEmpresasPage() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-[#64748B]" />
+            <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-sm text-[#64748B]">No hay empresas que coincidan.</p>
+            <p className="text-sm text-[#6B7280]">No hay empresas que coincidan.</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
-                <TableHead className="text-xs font-semibold text-[#64748B] pl-6">Empresa</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Industria</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Tamaño</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">SAT</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Productos</TableHead>
-                <TableHead className="text-xs font-semibold text-[#64748B]">Registro</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Empresa</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Industria</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Tamaño</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">SAT</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Productos</TableHead>
+                <TableHead className="text-xs font-semibold text-[#6B7280]">Registro</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,15 +102,15 @@ export default function AdminEmpresasPage() {
                 return (
                   <TableRow key={company.id} className="hover:bg-slate-50/60 align-top">
                     <TableCell className="pl-6 py-4">
-                      <p className="text-sm font-semibold text-[#0F172A]">{company.nombreRazonSocial}</p>
-                      <p className="text-xs text-[#64748B] font-mono mt-0.5">{company.rfc}</p>
+                      <p className="text-sm font-semibold text-[#1A1A1A]">{company.nombreRazonSocial}</p>
+                      <p className="text-xs text-[#6B7280] font-mono mt-0.5">{company.rfc}</p>
                     </TableCell>
 
-                    <TableCell className="text-sm text-[#64748B] py-4">
+                    <TableCell className="text-sm text-[#6B7280] py-4">
                       {company.industria ?? '—'}
                     </TableCell>
 
-                    <TableCell className="text-sm text-[#64748B] py-4">
+                    <TableCell className="text-sm text-[#6B7280] py-4">
                       {company.tamanoEmpresa ?? '—'}
                     </TableCell>
 
@@ -130,7 +130,7 @@ export default function AdminEmpresasPage() {
 
                     <TableCell className="py-4">
                       {apps.length === 0 ? (
-                        <span className="text-xs text-[#64748B]">Sin productos</span>
+                        <span className="text-xs text-[#6B7280]">Sin productos</span>
                       ) : (
                         <div className="space-y-2">
                           {apps.map((a) => {
@@ -144,12 +144,12 @@ export default function AdminEmpresasPage() {
                                 <Badge className={`${status.classes} border text-xs px-2 py-0.5 font-medium`}>
                                   {status.label}
                                 </Badge>
-                                <span className="text-xs text-[#64748B]">{formatMXN(a.montoSolicitado)}</span>
+                                <span className="text-xs text-[#6B7280]">{formatMXN(a.montoSolicitado)}</span>
                               </div>
                             )
                           })}
                           {apps.length > 1 && (
-                            <p className="text-xs text-[#64748B] font-medium">
+                            <p className="text-xs text-[#6B7280] font-medium">
                               Total: {formatMXN(totalMonto)}
                             </p>
                           )}
@@ -157,7 +157,7 @@ export default function AdminEmpresasPage() {
                       )}
                     </TableCell>
 
-                    <TableCell className="text-sm text-[#64748B] py-4">
+                    <TableCell className="text-sm text-[#6B7280] py-4">
                       {formatDate(company.createdAt)}
                     </TableCell>
                   </TableRow>

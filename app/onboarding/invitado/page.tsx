@@ -116,8 +116,8 @@ function InvitadoPageInner() {
   if (pageState === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-[#0F2D5E]" />
-        <p className="text-[#64748B]">Cargando invitación...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1A]" />
+        <p className="text-[#6B7280]">Cargando invitación...</p>
       </div>
     )
   }
@@ -167,15 +167,15 @@ function InvitadoPageInner() {
   const roleLabel = isShareholder ? 'accionista' : 'representante legal'
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#0F2D5E]/10 mb-4">
-            <span className="text-2xl font-bold text-[#0F2D5E]">A</span>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#3CBEDB]/10 mb-4">
+            <span className="text-2xl font-bold text-[#1A1A1A]">A</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#0F2D5E] mb-1">Completa tu información</h1>
-          <p className="text-[#64748B] text-sm">
+          <h1 className="text-2xl font-bold text-[#1A1A1A] mb-1">Completa tu información</h1>
+          <p className="text-[#6B7280] text-sm">
             Fuiste invitado como <strong>{roleLabel}</strong>
             {invitation?.inviteeName ? ` — ${invitation.inviteeName}` : ''}.
             Por favor llena los datos a continuación.
@@ -185,7 +185,7 @@ function InvitadoPageInner() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">Nombre(s) <span className="text-red-500">*</span></Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">Nombre(s) <span className="text-red-500">*</span></Label>
               <Input
                 required
                 value={nombres}
@@ -195,7 +195,7 @@ function InvitadoPageInner() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">Apellido paterno <span className="text-red-500">*</span></Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">Apellido paterno <span className="text-red-500">*</span></Label>
               <Input
                 required
                 value={apellidoPaterno}
@@ -205,7 +205,7 @@ function InvitadoPageInner() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">Apellido materno</Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">Apellido materno</Label>
               <Input
                 value={apellidoMaterno}
                 onChange={(e) => setApellidoMaterno(e.target.value)}
@@ -214,7 +214,7 @@ function InvitadoPageInner() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">CURP</Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">CURP</Label>
               <Input
                 value={curp}
                 onChange={(e) => setCurp(e.target.value.toUpperCase())}
@@ -224,7 +224,7 @@ function InvitadoPageInner() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">Fecha de nacimiento</Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">Fecha de nacimiento</Label>
               <Input
                 type="date"
                 value={fechaNacimiento}
@@ -233,9 +233,9 @@ function InvitadoPageInner() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">Teléfono celular</Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">Teléfono celular</Label>
               <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] text-sm">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-[#E2E8F0] bg-[#F5F5F5] text-[#6B7280] text-sm">
                   +52
                 </span>
                 <Input
@@ -250,7 +250,7 @@ function InvitadoPageInner() {
             </div>
             {!isShareholder && (
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">RFC personal</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">RFC personal</Label>
                 <Input
                   value={rfcPersonal}
                   onChange={(e) => setRfcPersonal(e.target.value.toUpperCase())}
@@ -262,7 +262,7 @@ function InvitadoPageInner() {
             )}
             {isShareholder && (
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">Ocupación</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">Ocupación</Label>
                 <Input
                   value={ocupacion}
                   onChange={(e) => setOcupacion(e.target.value)}
@@ -280,7 +280,7 @@ function InvitadoPageInner() {
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full h-11 bg-[#00C896] hover:bg-[#00b384] text-white font-semibold"
+            className="w-full h-11 bg-[#3CBEDB] hover:bg-[#00b384] text-white font-semibold"
           >
             {submitting ? (
               <>
@@ -309,8 +309,8 @@ function StatusScreen({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
       <div className="mb-4">{icon}</div>
-      <h1 className="text-2xl font-bold text-[#0F2D5E] mb-2">{title}</h1>
-      <p className="text-[#64748B] max-w-sm">{description}</p>
+      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2">{title}</h1>
+      <p className="text-[#6B7280] max-w-sm">{description}</p>
     </div>
   )
 }
@@ -320,7 +320,7 @@ export default function InvitadoPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0F2D5E]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1A]" />
         </div>
       }
     >

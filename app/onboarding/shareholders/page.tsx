@@ -155,7 +155,7 @@ function ShareholdersPageInner() {
   if (loadingInit) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -165,11 +165,11 @@ function ShareholdersPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 5 de 7</span>
-            <span className="text-sm text-[#64748B]">Accionistas</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 5 de 7</span>
+            <span className="text-sm text-[#6B7280]">Accionistas</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#00C896] transition-all" style={{ width: '71%' }} />
+            <div className="h-full rounded-full bg-[#3CBEDB] transition-all" style={{ width: '71%' }} />
           </div>
         </div>
       )}
@@ -178,14 +178,14 @@ function ShareholdersPageInner() {
         {shareholders.map((s, index) => (
           <div key={index} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-[#0F172A]">
+              <h2 className="text-base font-semibold text-[#1A1A1A]">
                 Accionista {index + 1}
               </h2>
               {shareholders.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeShareholder(index)}
-                  className="text-[#64748B] hover:text-red-500 transition-colors"
+                  className="text-[#6B7280] hover:text-red-500 transition-colors"
                   aria-label="Eliminar accionista"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -196,21 +196,21 @@ function ShareholdersPageInner() {
             <div className="space-y-4">
               {/* Checkboxes */}
               <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <label className="flex items-center gap-2 text-sm text-[#0F172A] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-[#1A1A1A] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={s.esPersonaMoral}
                     onChange={(e) => updateShareholder(index, 'esPersonaMoral', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#0F2D5E]"
+                    className="h-4 w-4 rounded border-slate-300 text-[#1A1A1A]"
                   />
                   Persona moral
                 </label>
-                <label className="flex items-center gap-2 text-sm text-[#0F172A] cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-[#1A1A1A] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={s.poseeMas25Porciento}
                     onChange={(e) => updateShareholder(index, 'poseeMas25Porciento', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#0F2D5E]"
+                    className="h-4 w-4 rounded border-slate-300 text-[#1A1A1A]"
                   />
                   Posee más del 25%
                 </label>
@@ -218,7 +218,7 @@ function ShareholdersPageInner() {
 
               {/* Porcentaje */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">% de participación</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">% de participación</Label>
                 <Input
                   type="number"
                   min={0.01}
@@ -238,7 +238,7 @@ function ShareholdersPageInner() {
               {s.poseeMas25Porciento && !s.esPersonaMoral && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">
+                    <Label className="text-sm font-medium text-[#1A1A1A]">
                       Nombre(s)<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -252,7 +252,7 @@ function ShareholdersPageInner() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">
+                    <Label className="text-sm font-medium text-[#1A1A1A]">
                       Apellido paterno<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -266,7 +266,7 @@ function ShareholdersPageInner() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">Apellido materno</Label>
+                    <Label className="text-sm font-medium text-[#1A1A1A]">Apellido materno</Label>
                     <Input
                       placeholder="Ej. García"
                       value={s.apellidoMaterno ?? ''}
@@ -275,7 +275,7 @@ function ShareholdersPageInner() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">
+                    <Label className="text-sm font-medium text-[#1A1A1A]">
                       CURP<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -290,7 +290,7 @@ function ShareholdersPageInner() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">Fecha de nacimiento</Label>
+                    <Label className="text-sm font-medium text-[#1A1A1A]">Fecha de nacimiento</Label>
                     <Input
                       type="date"
                       value={s.fechaNacimiento ?? ''}
@@ -299,7 +299,7 @@ function ShareholdersPageInner() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-[#0F172A]">Teléfono (10 dígitos)</Label>
+                    <Label className="text-sm font-medium text-[#1A1A1A]">Teléfono (10 dígitos)</Label>
                     <Input
                       type="tel"
                       placeholder="Ej. 5512345678"
@@ -310,7 +310,7 @@ function ShareholdersPageInner() {
                     />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-sm font-medium text-[#0F172A]">
+                    <Label className="text-sm font-medium text-[#1A1A1A]">
                       Ocupación<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -324,7 +324,7 @@ function ShareholdersPageInner() {
                     )}
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-sm font-medium text-[#0F172A]">
+                    <Label className="text-sm font-medium text-[#1A1A1A]">
                       Correo electrónico<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -348,7 +348,7 @@ function ShareholdersPageInner() {
         <button
           type="button"
           onClick={addShareholder}
-          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl py-4 text-sm text-[#64748B] hover:text-[#0F2D5E] hover:border-[#0F2D5E]/30 transition-colors"
+          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl py-4 text-sm text-[#6B7280] hover:text-[#1A1A1A] hover:border-[#3CBEDB]/30 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Agregar otro accionista
@@ -362,7 +362,7 @@ function ShareholdersPageInner() {
 
         <Button
           type="submit"
-          className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+          className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
           disabled={loading}
         >
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continuar'}
@@ -371,7 +371,7 @@ function ShareholdersPageInner() {
         <Button
           type="button"
           variant="ghost"
-          className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+          className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
           disabled={loading}
           onClick={async () => {
             if (companyId) await advanceToStepAction(companyId, 'company-docs')

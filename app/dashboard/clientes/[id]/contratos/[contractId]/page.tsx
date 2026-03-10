@@ -134,7 +134,7 @@ export default function ContratoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-6 w-6 animate-spin text-[#64748B]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#6B7280]" />
       </div>
     )
   }
@@ -142,7 +142,7 @@ export default function ContratoPage() {
   if (!contract?.analysis_result) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-12 text-center">
-        <p className="text-[#64748B]">Análisis no disponible.</p>
+        <p className="text-[#6B7280]">Análisis no disponible.</p>
         <Button variant="ghost" onClick={() => router.push(`/dashboard/clientes/${id}`)} className="mt-4">
           Volver
         </Button>
@@ -151,7 +151,7 @@ export default function ContratoPage() {
   }
 
   const r = contract.analysis_result
-  const viabilidadColor = r.viabilidad_score >= 70 ? 'bg-[#00C896]' : r.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
+  const viabilidadColor = r.viabilidad_score >= 70 ? 'bg-[#3CBEDB]' : r.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
   const isValidDate = (d: string | null) => d && d !== 'N/A' && d !== 'null'
 
   return (
@@ -163,14 +163,14 @@ export default function ContratoPage() {
             variant="ghost"
             size="sm"
             onClick={() => router.push(`/dashboard/clientes/${id}`)}
-            className="text-[#64748B] hover:text-[#0F2D5E] -ml-2"
+            className="text-[#6B7280] hover:text-[#1A1A1A] -ml-2"
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             Volver
           </Button>
           <div className="h-4 w-px bg-slate-200" />
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
         </div>
       </header>
@@ -180,56 +180,56 @@ export default function ContratoPage() {
         {/* Título */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <FileText className="h-4 w-4 text-[#64748B]" />
-            <span className="text-sm text-[#64748B]">{getFileName(contract.storage_path)}</span>
+            <FileText className="h-4 w-4 text-[#6B7280]" />
+            <span className="text-sm text-[#6B7280]">{getFileName(contract.storage_path)}</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">{r.cliente_nombre || contract.nombre_cliente}</h1>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">{r.cliente_nombre || contract.nombre_cliente}</h1>
         </div>
 
         {/* Análisis */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">Análisis del contrato</CardTitle>
+            <CardTitle className="text-base font-semibold text-[#1A1A1A]">Análisis del contrato</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
 
             <section>
-              <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Resumen</h3>
-              <p className="text-sm text-[#0F172A] leading-relaxed bg-slate-50 rounded-lg p-3">{r.resumen}</p>
+              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Resumen</h3>
+              <p className="text-sm text-[#1A1A1A] leading-relaxed bg-slate-50 rounded-lg p-3">{r.resumen}</p>
             </section>
 
             <section className="grid grid-cols-2 gap-3">
               <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                <DollarSign className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
+                <DollarSign className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs text-[#64748B]">Monto total</p>
-                  <p className="text-sm font-semibold text-[#0F172A]">
+                  <p className="text-xs text-[#6B7280]">Monto total</p>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">
                     {r.monto_total ? formatMXN(r.monto_total, r.moneda) : '—'}
                   </p>
                 </div>
               </div>
               <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                <FileText className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
+                <FileText className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs text-[#64748B]">Cliente</p>
-                  <p className="text-sm font-semibold text-[#0F172A]">{r.cliente_nombre || '—'}</p>
+                  <p className="text-xs text-[#6B7280]">Cliente</p>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">{r.cliente_nombre || '—'}</p>
                 </div>
               </div>
               {isValidDate(r.fecha_inicio) && (
                 <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                  <Calendar className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
+                  <Calendar className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-[#64748B]">Inicio</p>
-                    <p className="text-sm font-semibold text-[#0F172A]">{r.fecha_inicio}</p>
+                    <p className="text-xs text-[#6B7280]">Inicio</p>
+                    <p className="text-sm font-semibold text-[#1A1A1A]">{r.fecha_inicio}</p>
                   </div>
                 </div>
               )}
               {isValidDate(r.fecha_fin) && (
                 <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
-                  <Calendar className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
+                  <Calendar className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-[#64748B]">Vencimiento</p>
-                    <p className="text-sm font-semibold text-[#0F172A]">{r.fecha_fin}</p>
+                    <p className="text-xs text-[#6B7280]">Vencimiento</p>
+                    <p className="text-sm font-semibold text-[#1A1A1A]">{r.fecha_fin}</p>
                   </div>
                 </div>
               )}
@@ -237,7 +237,7 @@ export default function ContratoPage() {
 
             {r.fechas_pago?.length > 0 && (
               <section>
-                <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Fechas de pago</h3>
+                <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Fechas de pago</h3>
                 <div className="flex flex-wrap gap-2">
                   {r.fechas_pago.map((f, i) => (
                     <span key={i} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1">
@@ -250,11 +250,11 @@ export default function ContratoPage() {
 
             {r.entregables?.length > 0 && (
               <section>
-                <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Entregables</h3>
+                <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Entregables</h3>
                 <ul className="space-y-1.5">
                   {r.entregables.map((e, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-[#0F172A]">
-                      <CheckCircle2 className="h-4 w-4 text-[#00C896] shrink-0 mt-0.5" />
+                    <li key={i} className="flex gap-2 text-sm text-[#1A1A1A]">
+                      <CheckCircle2 className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
                       {e}
                     </li>
                   ))}
@@ -264,12 +264,12 @@ export default function ContratoPage() {
 
             {r.riesgos?.length > 0 && (
               <section>
-                <h3 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Riesgos identificados</h3>
+                <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Riesgos identificados</h3>
                 <ul className="space-y-2">
                   {r.riesgos.map((riesgo, i) => (
                     <li key={i} className="flex items-start gap-2.5 bg-slate-50 rounded-lg p-3">
                       <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      <p className="flex-1 text-sm text-[#0F172A]">{riesgo.descripcion}</p>
+                      <p className="flex-1 text-sm text-[#1A1A1A]">{riesgo.descripcion}</p>
                       <RiesgoBadge nivel={riesgo.nivel} />
                     </li>
                   ))}
@@ -280,12 +280,12 @@ export default function ContratoPage() {
             <section className="bg-slate-50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-[#0F2D5E]" />
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Score de viabilidad</h3>
+                  <TrendingUp className="h-4 w-4 text-[#1A1A1A]" />
+                  <h3 className="text-sm font-semibold text-[#1A1A1A]">Score de viabilidad</h3>
                 </div>
-                <span className="text-2xl font-bold text-[#0F2D5E]">
+                <span className="text-2xl font-bold text-[#1A1A1A]">
                   {r.viabilidad_score}
-                  <span className="text-sm text-[#64748B] font-normal">/100</span>
+                  <span className="text-sm text-[#6B7280] font-normal">/100</span>
                 </span>
               </div>
               <div className="h-3 bg-slate-200 rounded-full overflow-hidden mb-2">
@@ -294,7 +294,7 @@ export default function ContratoPage() {
                   style={{ width: `${r.viabilidad_score}%` }}
                 />
               </div>
-              <p className="text-xs text-[#64748B] leading-relaxed">{r.viabilidad_razon}</p>
+              <p className="text-xs text-[#6B7280] leading-relaxed">{r.viabilidad_razon}</p>
             </section>
 
           </CardContent>
@@ -303,8 +303,8 @@ export default function ContratoPage() {
         {/* Chat */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A] flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-[#00C896]" />
+            <CardTitle className="text-base font-semibold text-[#1A1A1A] flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-[#3CBEDB]" />
               Preguntar sobre el contrato
             </CardTitle>
           </CardHeader>
@@ -313,14 +313,14 @@ export default function ContratoPage() {
             {/* Preguntas sugeridas (solo si no hay mensajes) */}
             {messages.length === 0 && (
               <div>
-                <p className="text-xs text-[#64748B] mb-2">Preguntas sugeridas:</p>
+                <p className="text-xs text-[#6B7280] mb-2">Preguntas sugeridas:</p>
                 <div className="flex flex-wrap gap-2">
                   {SUGGESTED_QUESTIONS.map((q) => (
                     <button
                       key={q}
                       onClick={() => sendMessage(q)}
                       disabled={sending}
-                      className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-[#0F2D5E] transition-colors disabled:opacity-50"
+                      className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-[#1A1A1A] transition-colors disabled:opacity-50"
                     >
                       {q}
                     </button>
@@ -337,8 +337,8 @@ export default function ContratoPage() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                         msg.role === 'user'
-                          ? 'bg-[#0F2D5E] text-white rounded-br-sm'
-                          : 'bg-slate-100 text-[#0F172A] rounded-bl-sm'
+                          ? 'bg-[#3CBEDB] text-white rounded-br-sm'
+                          : 'bg-slate-100 text-[#1A1A1A] rounded-bl-sm'
                       }`}
                     >
                       {msg.content}
@@ -348,7 +348,7 @@ export default function ContratoPage() {
                 {sending && (
                   <div className="flex justify-start">
                     <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#64748B]" />
+                      <Loader2 className="h-4 w-4 animate-spin text-[#6B7280]" />
                     </div>
                   </div>
                 )}
@@ -364,12 +364,12 @@ export default function ContratoPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Escribe tu pregunta sobre el contrato..."
                 disabled={sending}
-                className="flex-1 h-10 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D5E]/20 focus:border-[#0F2D5E] disabled:opacity-50 disabled:bg-slate-50"
+                className="flex-1 h-10 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB] disabled:opacity-50 disabled:bg-slate-50"
               />
               <Button
                 type="submit"
                 disabled={!input.trim() || sending}
-                className="h-10 w-10 p-0 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white shrink-0"
+                className="h-10 w-10 p-0 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white shrink-0"
               >
                 <Send className="h-4 w-4" />
               </Button>

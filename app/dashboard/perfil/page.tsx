@@ -44,9 +44,9 @@ function SectionHeader({
         <div className={`p-1.5 rounded-lg ${done ? 'bg-emerald-50' : 'bg-amber-50'}`}>
           {icon}
         </div>
-        <h2 className="text-base font-semibold text-[#0F172A]">{title}</h2>
+        <h2 className="text-base font-semibold text-[#1A1A1A]">{title}</h2>
         {done
-          ? <CheckCircle2 className="h-4 w-4 text-[#00C896]" />
+          ? <CheckCircle2 className="h-4 w-4 text-[#3CBEDB]" />
           : <AlertCircle className="h-4 w-4 text-amber-500" />
         }
       </div>
@@ -54,7 +54,7 @@ function SectionHeader({
         <Button
           size="sm"
           variant="outline"
-          className="border-[#0F2D5E] text-[#0F2D5E] hover:bg-[#0F2D5E]/5 h-8 text-xs"
+          className="border-[#3CBEDB] text-[#1A1A1A] hover:bg-[#3CBEDB]/5 h-8 text-xs"
           onClick={onComplete}
         >
           {done ? 'Editar' : completeLabel}
@@ -67,8 +67,8 @@ function SectionHeader({
 function DataRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-[#64748B] shrink-0">{label}</span>
-      <span className="text-sm font-medium text-[#0F172A] text-right">{value || '—'}</span>
+      <span className="text-sm text-[#6B7280] shrink-0">{label}</span>
+      <span className="text-sm font-medium text-[#1A1A1A] text-right">{value || '—'}</span>
     </div>
   )
 }
@@ -104,7 +104,7 @@ export default function PerfilPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -132,14 +132,14 @@ export default function PerfilPage() {
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+            className="text-[#6B7280] hover:text-[#1A1A1A] transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
-          <span className="text-sm text-[#64748B]">/ Mi perfil</span>
+          <span className="text-sm text-[#6B7280]">/ Mi perfil</span>
         </div>
       </header>
 
@@ -148,7 +148,7 @@ export default function PerfilPage() {
         {/* ── Empresa ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <SectionHeader
-            icon={<Building2 className="h-4 w-4 text-[#0F2D5E]" />}
+            icon={<Building2 className="h-4 w-4 text-[#1A1A1A]" />}
             title="Empresa"
             done={true}
           />
@@ -161,7 +161,7 @@ export default function PerfilPage() {
         {/* ── Verificación SAT ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <SectionHeader
-            icon={<ShieldCheck className={`h-4 w-4 ${company?.syntageValidatedAt ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
+            icon={<ShieldCheck className={`h-4 w-4 ${company?.syntageValidatedAt ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />}
             title="Verificación fiscal (SAT)"
             done={!!company?.syntageValidatedAt}
             onComplete={!company?.syntageValidatedAt ? () => router.push('/onboarding/verificacion-fiscal?from=perfil') : undefined}
@@ -173,7 +173,7 @@ export default function PerfilPage() {
               value={new Date(company.syntageValidatedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
             />
           ) : (
-            <p className="text-sm text-[#64748B]">
+            <p className="text-sm text-[#6B7280]">
               No se ha conectado con el SAT. Conecta tu empresa para obtener mejores condiciones de crédito.
             </p>
           )}
@@ -182,7 +182,7 @@ export default function PerfilPage() {
         {/* ── Representante legal ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <SectionHeader
-            icon={<Users className={`h-4 w-4 ${legalRep ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
+            icon={<Users className={`h-4 w-4 ${legalRep ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />}
             title="Representante legal"
             done={legalRepComplete}
             onComplete={() => goComplete('/onboarding/legal-rep')}
@@ -199,7 +199,7 @@ export default function PerfilPage() {
               <DataRow label="Teléfono" value={legalRep.telefono} />
             </>
           ) : (
-            <p className="text-sm text-[#64748B]">
+            <p className="text-sm text-[#6B7280]">
               Aún no has registrado al representante legal de la empresa.
             </p>
           )}
@@ -208,7 +208,7 @@ export default function PerfilPage() {
         {/* ── Accionistas ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <SectionHeader
-            icon={<Users className={`h-4 w-4 ${hasShareholders ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
+            icon={<Users className={`h-4 w-4 ${hasShareholders ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />}
             title="Accionistas"
             done={hasShareholders}
             onComplete={() => goComplete('/onboarding/shareholders')}
@@ -218,7 +218,7 @@ export default function PerfilPage() {
             <div className="space-y-4">
               {shareholders.map((s, i) => (
                 <div key={s.id} className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-3">
-                  <p className="text-xs font-medium text-[#64748B] mb-2">Accionista {i + 1}</p>
+                  <p className="text-xs font-medium text-[#6B7280] mb-2">Accionista {i + 1}</p>
                   <DataRow
                     label="Nombre"
                     value={[s.nombres, s.apellidoPaterno, s.apellidoMaterno].filter(Boolean).join(' ') || (s.esPersonaMoral ? 'Persona moral' : null)}
@@ -230,7 +230,7 @@ export default function PerfilPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full border-dashed border-slate-300 text-[#64748B] hover:text-[#0F2D5E] gap-1.5 h-9"
+                className="w-full border-dashed border-slate-300 text-[#6B7280] hover:text-[#1A1A1A] gap-1.5 h-9"
                 onClick={() => goComplete('/onboarding/shareholders')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -238,7 +238,7 @@ export default function PerfilPage() {
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-[#64748B]">
+            <p className="text-sm text-[#6B7280]">
               No has registrado accionistas aún.
             </p>
           )}
@@ -247,7 +247,7 @@ export default function PerfilPage() {
         {/* ── Documentos ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <SectionHeader
-            icon={<FileText className={`h-4 w-4 ${hasDocs ? 'text-[#0F2D5E]' : 'text-slate-400'}`} />}
+            icon={<FileText className={`h-4 w-4 ${hasDocs ? 'text-[#1A1A1A]' : 'text-slate-400'}`} />}
             title="Documentos de la empresa"
             done={hasDocs}
             onComplete={() => goComplete('/onboarding/company-docs')}
@@ -257,7 +257,7 @@ export default function PerfilPage() {
             <div className="space-y-2">
               {companyDocs.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-                  <span className="text-sm text-[#64748B]">{DOC_LABELS[doc.documentType] ?? doc.documentType}</span>
+                  <span className="text-sm text-[#6B7280]">{DOC_LABELS[doc.documentType] ?? doc.documentType}</span>
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">
                     <CheckCircle2 className="h-3 w-3" />
                     Cargado
@@ -266,7 +266,7 @@ export default function PerfilPage() {
               ))}
               {missingDocTypes.map((t) => (
                 <div key={t} className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-                  <span className="text-sm text-[#64748B]">{DOC_LABELS[t] ?? t}</span>
+                  <span className="text-sm text-[#6B7280]">{DOC_LABELS[t] ?? t}</span>
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-0.5">
                     Pendiente
                   </span>
@@ -275,7 +275,7 @@ export default function PerfilPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full border-dashed border-slate-300 text-[#64748B] hover:text-[#0F2D5E] gap-1.5 h-9 mt-2"
+                className="w-full border-dashed border-slate-300 text-[#6B7280] hover:text-[#1A1A1A] gap-1.5 h-9 mt-2"
                 onClick={() => goComplete('/onboarding/company-docs')}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -283,7 +283,7 @@ export default function PerfilPage() {
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-[#64748B]">
+            <p className="text-sm text-[#6B7280]">
               No has subido documentos corporativos aún.
             </p>
           )}

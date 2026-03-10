@@ -69,33 +69,33 @@ export default function VerificacionFiscalDashboardPage() {
 
   if (loadingCompany) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+            className="text-[#6B7280] hover:text-[#1A1A1A] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
+          <span className="text-xl font-bold text-[#1A1A1A]">
+            Accesa<span className="text-[#3CBEDB]">X</span>
           </span>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-6 py-12">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#0F172A]">Verificación fiscal</h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Verificación fiscal</h1>
+          <p className="text-sm text-[#6B7280] mt-1">
             Conecta tu empresa con el SAT para desbloquear todas las funciones de AccesaX.
           </p>
         </div>
@@ -105,16 +105,16 @@ export default function VerificacionFiscalDashboardPage() {
           {(estado === 'idle' || estado === 'loading') && (
             <form onSubmit={handleConectar} className="space-y-5">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-[#0F172A]">RFC</Label>
+                <Label className="text-sm font-medium text-[#1A1A1A]">RFC</Label>
                 <Input
                   value={company?.rfc ?? ''}
                   disabled
-                  className="h-11 font-mono tracking-wider bg-slate-50 text-[#64748B]"
+                  className="h-11 font-mono tracking-wider bg-slate-50 text-[#6B7280]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="ciec" className="text-sm font-medium text-[#0F172A]">
+                <Label htmlFor="ciec" className="text-sm font-medium text-[#1A1A1A]">
                   CIEC — Contraseña SAT
                 </Label>
                 <Input
@@ -131,10 +131,10 @@ export default function VerificacionFiscalDashboardPage() {
               </div>
 
               <div className="flex gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                <Lock className="h-4 w-4 text-[#64748B] mt-0.5 shrink-0" />
-                <p className="text-xs text-[#64748B] leading-relaxed">
+                <Lock className="h-4 w-4 text-[#6B7280] mt-0.5 shrink-0" />
+                <p className="text-xs text-[#6B7280] leading-relaxed">
                   Tus credenciales se transmiten de forma segura y{' '}
-                  <span className="font-medium text-[#0F172A]">
+                  <span className="font-medium text-[#1A1A1A]">
                     no se almacenan en nuestros servidores
                   </span>
                   . Solo se utiliza la conexión temporal con el SAT.
@@ -152,7 +152,7 @@ export default function VerificacionFiscalDashboardPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+                className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
                 disabled={estado === 'loading' || !ciec}
               >
                 {estado === 'loading' ? (
@@ -166,7 +166,7 @@ export default function VerificacionFiscalDashboardPage() {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+                className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
                 disabled={estado === 'loading'}
                 onClick={() => router.push('/dashboard')}
               >
@@ -178,7 +178,7 @@ export default function VerificacionFiscalDashboardPage() {
           {estado === 'success' && (
             <div className="space-y-5">
               <div className="flex gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4">
-                <CheckCircle2 className="h-5 w-5 text-[#00C896] mt-0.5 shrink-0" />
+                <CheckCircle2 className="h-5 w-5 text-[#3CBEDB] mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-emerald-800">
                     Verificación exitosa
@@ -191,7 +191,7 @@ export default function VerificacionFiscalDashboardPage() {
 
               <Button
                 onClick={() => router.push('/dashboard')}
-                className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
+                className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
               >
                 Ir al dashboard
               </Button>
@@ -215,14 +215,14 @@ export default function VerificacionFiscalDashboardPage() {
               <Button
                 onClick={handleReintentar}
                 variant="outline"
-                className="w-full h-11 border-[#0F2D5E] text-[#0F2D5E] hover:bg-[#0F2D5E]/5 font-medium"
+                className="w-full h-11 border-[#3CBEDB] text-[#1A1A1A] hover:bg-[#3CBEDB]/5 font-medium"
               >
                 Reintentar
               </Button>
 
               <Button
                 variant="ghost"
-                className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+                className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
                 onClick={() => router.push('/dashboard')}
               >
                 Volver al dashboard

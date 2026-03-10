@@ -80,7 +80,7 @@ function VerificacionFiscalPageInner() {
   if (loadingCompany) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -90,12 +90,12 @@ function VerificacionFiscalPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 2 de 7</span>
-            <span className="text-sm text-[#64748B]">Verificación fiscal</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 2 de 7</span>
+            <span className="text-sm text-[#6B7280]">Verificación fiscal</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#00C896] transition-all"
+              className="h-full rounded-full bg-[#3CBEDB] transition-all"
               style={{ width: '28%' }}
             />
           </div>
@@ -105,10 +105,10 @@ function VerificacionFiscalPageInner() {
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-[#0F172A]">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">
             Conecta tu empresa con el SAT
           </h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <p className="text-sm text-[#6B7280] mt-1">
             Verificamos tu situación fiscal en tiempo real para ofrecerte las mejores condiciones de crédito.
           </p>
         </div>
@@ -118,17 +118,17 @@ function VerificacionFiscalPageInner() {
           <form onSubmit={handleConectar} className="space-y-5">
             {/* RFC pre-llenado (no editable) */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-[#0F172A]">RFC</Label>
+              <Label className="text-sm font-medium text-[#1A1A1A]">RFC</Label>
               <Input
                 value={company?.rfc ?? ''}
                 disabled
-                className="h-11 font-mono tracking-wider bg-slate-50 text-[#64748B]"
+                className="h-11 font-mono tracking-wider bg-slate-50 text-[#6B7280]"
               />
             </div>
 
             {/* CIEC */}
             <div className="space-y-1.5">
-              <Label htmlFor="ciec" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="ciec" className="text-sm font-medium text-[#1A1A1A]">
                 CIEC — Contraseña SAT
               </Label>
               <Input
@@ -146,10 +146,10 @@ function VerificacionFiscalPageInner() {
 
             {/* Aviso de seguridad */}
             <div className="flex gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <Lock className="h-4 w-4 text-[#64748B] mt-0.5 shrink-0" />
-              <p className="text-xs text-[#64748B] leading-relaxed">
+              <Lock className="h-4 w-4 text-[#6B7280] mt-0.5 shrink-0" />
+              <p className="text-xs text-[#6B7280] leading-relaxed">
                 Tus credenciales se transmiten de forma segura y{' '}
-                <span className="font-medium text-[#0F172A]">
+                <span className="font-medium text-[#1A1A1A]">
                   no se almacenan en nuestros servidores
                 </span>
                 . Solo se utiliza la conexión temporal con el SAT.
@@ -168,7 +168,7 @@ function VerificacionFiscalPageInner() {
 
             <Button
               type="submit"
-              className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium"
+              className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
               disabled={estado === 'loading' || !ciec}
             >
               {estado === 'loading' ? (
@@ -182,7 +182,7 @@ function VerificacionFiscalPageInner() {
             <Button
               type="button"
               variant="ghost"
-              className="w-full h-10 text-[#64748B] hover:text-[#0F172A] text-sm"
+              className="w-full h-10 text-[#6B7280] hover:text-[#1A1A1A] text-sm"
               disabled={estado === 'loading'}
               onClick={handleSaltar}
             >
@@ -195,7 +195,7 @@ function VerificacionFiscalPageInner() {
         {estado === 'success' && (
           <div className="space-y-5">
             <div className="flex gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4">
-              <CheckCircle2 className="h-5 w-5 text-[#00C896] mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-[#3CBEDB] mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-emerald-800">
                   Verificación exitosa
@@ -211,7 +211,7 @@ function VerificacionFiscalPageInner() {
                 if (company) await advanceToStepAction(company.id, 'legal-rep')
                 router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
               }}
-              className="w-full h-11 bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
+              className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
             >
               Continuar
             </Button>
@@ -236,7 +236,7 @@ function VerificacionFiscalPageInner() {
             <Button
               onClick={handleReintentar}
               variant="outline"
-              className="w-full h-11 border-[#0F2D5E] text-[#0F2D5E] hover:bg-[#0F2D5E]/5 font-medium"
+              className="w-full h-11 border-[#3CBEDB] text-[#1A1A1A] hover:bg-[#3CBEDB]/5 font-medium"
             >
               Reintentar
             </Button>

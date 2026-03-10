@@ -152,7 +152,7 @@ function LegalRepPageInner() {
   if (loadingCompany) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
       </div>
     )
   }
@@ -162,11 +162,11 @@ function LegalRepPageInner() {
       {!fromPerfil && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-[#0F2D5E]">Paso 3 de 7</span>
-            <span className="text-sm text-[#64748B]">Representante legal</span>
+            <span className="text-sm font-medium text-[#1A1A1A]">Paso 3 de 7</span>
+            <span className="text-sm text-[#6B7280]">Representante legal</span>
           </div>
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#00C896] transition-all" style={{ width: '42%' }} />
+            <div className="h-full rounded-full bg-[#3CBEDB] transition-all" style={{ width: '42%' }} />
           </div>
         </div>
       )}
@@ -174,8 +174,8 @@ function LegalRepPageInner() {
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-[#0F172A]">Datos del representante legal</h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">Datos del representante legal</h1>
+          <p className="text-sm text-[#6B7280] mt-1">
             La persona con poder notarial para obligar a la empresa.
           </p>
         </div>
@@ -188,9 +188,9 @@ function LegalRepPageInner() {
               type="checkbox"
               checked={form.esElUsuario}
               onChange={(e) => handleChange('esElUsuario', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[#0F2D5E] focus:ring-[#0F2D5E]/30"
+              className="h-4 w-4 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#3CBEDB]/30"
             />
-            <Label htmlFor="esElUsuario" className="text-sm text-[#0F172A] cursor-pointer">
+            <Label htmlFor="esElUsuario" className="text-sm text-[#1A1A1A] cursor-pointer">
               Soy yo el representante legal
             </Label>
           </div>
@@ -198,7 +198,7 @@ function LegalRepPageInner() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Nombres */}
             <div className="space-y-1.5">
-              <Label htmlFor="nombres" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="nombres" className="text-sm font-medium text-[#1A1A1A]">
                 Nombre(s)<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
@@ -216,7 +216,7 @@ function LegalRepPageInner() {
 
             {/* Apellido paterno */}
             <div className="space-y-1.5">
-              <Label htmlFor="apellidoPaterno" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="apellidoPaterno" className="text-sm font-medium text-[#1A1A1A]">
                 Apellido paterno<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
@@ -234,7 +234,7 @@ function LegalRepPageInner() {
 
             {/* Apellido materno */}
             <div className="space-y-1.5">
-              <Label htmlFor="apellidoMaterno" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="apellidoMaterno" className="text-sm font-medium text-[#1A1A1A]">
                 Apellido materno
               </Label>
               <Input
@@ -249,7 +249,7 @@ function LegalRepPageInner() {
 
             {/* Teléfono */}
             <div className="space-y-1.5">
-              <Label htmlFor="telefono" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="telefono" className="text-sm font-medium text-[#1A1A1A]">
                 Teléfono (10 dígitos)
               </Label>
               <Input
@@ -269,7 +269,7 @@ function LegalRepPageInner() {
 
             {/* CURP */}
             <div className="space-y-1.5">
-              <Label htmlFor="curp" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="curp" className="text-sm font-medium text-[#1A1A1A]">
                 CURP<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
@@ -288,7 +288,7 @@ function LegalRepPageInner() {
 
             {/* RFC personal */}
             <div className="space-y-1.5">
-              <Label htmlFor="rfcPersonal" className="text-sm font-medium text-[#0F172A]">
+              <Label htmlFor="rfcPersonal" className="text-sm font-medium text-[#1A1A1A]">
                 RFC (persona física)<span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Input
@@ -308,7 +308,7 @@ function LegalRepPageInner() {
 
           {/* Email */}
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-sm font-medium text-[#0F172A]">
+            <Label htmlFor="email" className="text-sm font-medium text-[#1A1A1A]">
               Correo electrónico<span className="text-red-500 ml-0.5">*</span>
             </Label>
             <Input
@@ -333,7 +333,7 @@ function LegalRepPageInner() {
 
           <Button
             type="submit"
-            className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium mt-2"
+            className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium mt-2"
             disabled={loading}
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continuar'}

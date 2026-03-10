@@ -19,13 +19,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-56 bg-[#0F2D5E] flex flex-col shrink-0">
+      <aside className="w-56 bg-[#1C1C1E] flex flex-col shrink-0">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10">
-          <span className="text-xl font-bold text-white">
-            Accesa<span className="text-[#00C896]">X</span>
-          </span>
-          <span className="ml-2 text-[10px] font-semibold tracking-widest text-white/50 uppercase">
+          <span className="text-xl font-bold text-white">accesa</span>
+          <span className="ml-2 text-[10px] font-semibold tracking-widest text-white/40 uppercase">
             Admin
           </span>
         </div>
@@ -57,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Content */}
-      <main className="flex-1 bg-[#F8FAFC] min-h-screen overflow-auto">
+      <main className="flex-1 bg-[#F5F5F5] min-h-screen overflow-auto">
         {children}
       </main>
     </div>

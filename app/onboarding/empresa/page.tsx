@@ -61,12 +61,12 @@ export default function EmpresaPage() {
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[#0F2D5E]">Paso 1 de 7</span>
-          <span className="text-sm text-[#64748B]">Información de la empresa</span>
+          <span className="text-sm font-medium text-[#1A1A1A]">Paso 1 de 7</span>
+          <span className="text-sm text-[#6B7280]">Información de la empresa</span>
         </div>
         <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#00C896] transition-all"
+            className="h-full rounded-full bg-[#3CBEDB] transition-all"
             style={{ width: '14%' }}
           />
         </div>
@@ -75,10 +75,10 @@ export default function EmpresaPage() {
       {/* Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-[#0F172A]">
+          <h1 className="text-xl font-semibold text-[#1A1A1A]">
             Cuéntanos sobre tu empresa
           </h1>
-          <p className="text-sm text-[#64748B] mt-1">
+          <p className="text-sm text-[#6B7280] mt-1">
             Necesitamos estos datos para personalizar tu experiencia de crédito.
           </p>
         </div>
@@ -87,7 +87,7 @@ export default function EmpresaPage() {
 
           {/* Nombre o razón social */}
           <div className="space-y-1.5">
-            <Label htmlFor="nombre" className="text-sm font-medium text-[#0F172A]">
+            <Label htmlFor="nombre" className="text-sm font-medium text-[#1A1A1A]">
               Nombre o razón social
             </Label>
             <Input
@@ -103,7 +103,7 @@ export default function EmpresaPage() {
 
           {/* RFC con validación en tiempo real */}
           <div className="space-y-1.5">
-            <Label htmlFor="rfc" className="text-sm font-medium text-[#0F172A]">
+            <Label htmlFor="rfc" className="text-sm font-medium text-[#1A1A1A]">
               RFC
             </Label>
             <div className="relative">
@@ -117,7 +117,7 @@ export default function EmpresaPage() {
                 maxLength={13}
                 className={`h-11 pr-10 font-mono tracking-wider ${
                   rfcStatus === 'valid'
-                    ? 'border-[#00C896] focus-visible:ring-[#00C896]/30'
+                    ? 'border-[#3CBEDB] focus-visible:ring-[#3CBEDB]/30'
                     : rfcStatus === 'invalid'
                     ? 'border-red-400 focus-visible:ring-red-200'
                     : ''
@@ -125,14 +125,14 @@ export default function EmpresaPage() {
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {rfcStatus === 'valid' && (
-                  <CheckCircle2 className="h-4 w-4 text-[#00C896]" />
+                  <CheckCircle2 className="h-4 w-4 text-[#3CBEDB]" />
                 )}
                 {rfcStatus === 'invalid' && (
                   <XCircle className="h-4 w-4 text-red-400" />
                 )}
               </div>
             </div>
-            <p className="text-xs text-[#64748B]">
+            <p className="text-xs text-[#6B7280]">
               {rfcStatus === 'invalid'
                 ? 'Formato inválido — debe tener 12 o 13 caracteres'
                 : '12 caracteres (persona moral) o 13 (persona física)'}
@@ -141,7 +141,7 @@ export default function EmpresaPage() {
 
           {/* Industria */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-[#0F172A]">Industria</Label>
+            <Label className="text-sm font-medium text-[#1A1A1A]">Industria</Label>
             <Select
               value={form.industria}
               onValueChange={(v) => handleChange('industria', v)}
@@ -163,7 +163,7 @@ export default function EmpresaPage() {
 
           {/* Tamaño */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-[#0F172A]">
+            <Label className="text-sm font-medium text-[#1A1A1A]">
               Tamaño de empresa
             </Label>
             <Select
@@ -193,7 +193,7 @@ export default function EmpresaPage() {
 
           <Button
             type="submit"
-            className="w-full h-11 bg-[#0F2D5E] hover:bg-[#0F2D5E]/90 text-white font-medium mt-2"
+            className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium mt-2"
             disabled={loading || !form.nombreRazonSocial || !form.industria || !form.tamanoEmpresa}
           >
             {loading ? (
