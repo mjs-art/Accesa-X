@@ -53,11 +53,12 @@ const config: Config = {
         },
         // AccesaX brand colors
         brand: {
-          primary: "#0F2D5E",
-          accent: "#00C896",
-          bg: "#F8FAFC",
-          text: "#0F172A",
-          "text-secondary": "#64748B",
+          primary: "#3CBEDB",
+          dark: "#2A2928",
+          bg: "#F5F5F5",
+          sidebar: "#1C1C1E",
+          text: "#1A1A1A",
+          "text-secondary": "#6B7280",
         },
       },
       borderRadius: {

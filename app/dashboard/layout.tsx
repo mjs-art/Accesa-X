@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import { Sidebar } from '@/components/layout/sidebar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -20,11 +21,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[#3CBEDB]" />
       </div>
     )
   }
 
-  return <div className="min-h-screen bg-[#F8FAFC]">{children}</div>
+  return (
+    <div className="min-h-screen bg-[#F5F5F5] flex">
+      <Sidebar />
+      <main className="flex-1 ml-40 min-h-screen">
+        {children}
+      </main>
+    </div>
+  )
 }

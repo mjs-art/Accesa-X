@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getOnboardingSummaryAction } from '@/app/actions/onboarding'
-import { getDashboardDataAction, signOutAction, syncSatDataAction, getCreditApplicationsAction } from '@/app/actions/dashboard'
+import { getDashboardDataAction, syncSatDataAction, getCreditApplicationsAction } from '@/app/actions/dashboard'
 import type { DashboardCompany, Resumen, Cliente } from '@/features/dashboard/types/dashboard.types'
 import type { CreditApplicationSummary } from '@/app/actions/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,13 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   FileText,
   Users,
   DollarSign,
@@ -34,9 +27,6 @@ import {
   Loader2,
   InboxIcon,
   RefreshCw,
-  LogOut,
-  User,
-  Bug,
   CreditCard,
 } from 'lucide-react'
 
@@ -115,11 +105,6 @@ export default function DashboardPage() {
   const isVerified = !!company?.syntageValidatedAt
   const hasData = resumen !== null
 
-  async function handleLogout() {
-    await signOutAction()
-    router.push('/')
-  }
-
   async function handleSync() {
     setSyncing(true)
     setSyncMsg(null)
@@ -146,83 +131,51 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-xl font-bold text-[#0F2D5E]">
-            Accesa<span className="text-[#00C896]">X</span>
-          </span>
-
-          <div className="flex items-center gap-3">
-            {company && (
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-[#0F172A]">{company.nombreRazonSocial}</p>
-                <p className="text-xs text-[#64748B] font-mono">{company.rfc}</p>
-              </div>
-            )}
-            {isVerified ? (
-              <div className="flex items-center gap-2">
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 gap-1.5 px-2.5 py-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  SAT Conectado
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-[#64748B] hover:text-[#0F2D5E]"
-                  onClick={handleSync}
-                  disabled={syncing}
-                  title="Sincronizar datos del SAT"
-                >
-                  <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            ) : (
+      {/* Topbar */}
+      <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between">
+        <div>
+          {company ? (
+            <>
+              <p className="text-sm font-semibold text-[#1A1A1A]">{company.nombreRazonSocial}</p>
+              <p className="text-xs text-[#6B7280] font-mono">{company.rfc}</p>
+            </>
+          ) : (
+            <p className="text-sm text-[#6B7280]">Cargando...</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isVerified ? (
+            <>
+              <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 gap-1.5 px-2.5 py-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                SAT Conectado
+              </Badge>
               <Button
                 size="sm"
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5"
-                onClick={() => router.push('/dashboard/verificacion-fiscal')}
+                variant="ghost"
+                className="h-8 w-8 p-0 text-[#6B7280] hover:text-[#1A1A1A]"
+                onClick={handleSync}
+                disabled={syncing}
+                title="Sincronizar datos del SAT"
               >
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Sin verificar
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
               </Button>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full bg-slate-100 hover:bg-slate-200 text-[#0F2D5E]"
-                >
-                  <User className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
-                  <User className="mr-2 h-4 w-4" />
-                  Mi perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/dashboard/debug')}>
-                  <Bug className="mr-2 h-4 w-4 text-slate-400" />
-                  <span className="text-slate-500">Debug</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Cerrar sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5"
+              onClick={() => router.push('/dashboard/verificacion-fiscal')}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Sin verificar
+            </Button>
+          )}
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <div className="px-8 py-8 space-y-8">
 
         {/* Mensaje resultado de sincronización */}
         {syncMsg && (
@@ -285,7 +238,7 @@ export default function DashboardPage() {
           </div>
           <Button
             onClick={() => router.push('/solicitar-credito')}
-            className="bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium px-6"
+            className="bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium px-6"
           >
             Solicitar crédito
           </Button>
@@ -354,7 +307,7 @@ export default function DashboardPage() {
             <Button
               size="sm"
               onClick={() => router.push('/solicitar-credito')}
-              className="bg-[#00C896] hover:bg-[#00C896]/90 text-white font-medium"
+              className="bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
             >
               <CreditCard className="mr-1.5 h-3.5 w-3.5" />
               Nueva solicitud
@@ -363,7 +316,7 @@ export default function DashboardPage() {
           <CardContent className="p-0">
             {loadingData ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
               </div>
             ) : applications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-6">
@@ -420,7 +373,7 @@ export default function DashboardPage() {
           <CardContent className="p-0">
             {loadingData ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-[#0F2D5E]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[#1A1A1A]" />
               </div>
             ) : clientes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
@@ -475,7 +428,7 @@ export default function DashboardPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-[#0F2D5E] hover:text-[#0F2D5E] hover:bg-[#0F2D5E]/5 font-medium"
+                          className="text-[#1A1A1A] hover:text-[#1A1A1A] hover:bg-[#0F2D5E]/5 font-medium"
                           onClick={() => router.push(`/dashboard/clientes/${encodeURIComponent(cliente.rfc)}?nombre=${encodeURIComponent(cliente.nombre)}`)}
                         >
                           Ver contratos
@@ -489,7 +442,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   )
 }
