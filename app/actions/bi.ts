@@ -62,13 +62,12 @@ export interface BiData {
 
 export async function getBiDataAction(): Promise<{ data: BiData } | { error: string }> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return { error: 'No autenticado' }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
 
-  const { data, error } = await supabase.functions.invoke('get-bi-data', {
-    headers: { Authorization: `Bearer ${session.access_token}` },
-  })
+  const { data, error } = await supabase.functions.invoke('get-bi-data')
 
-  if (error || !data) return { error: 'Error al obtener datos de inteligencia' }
+  if (error) return { error: error.message ?? 'Error al obtener datos de inteligencia' }
+  if (!data) return { error: 'Sin datos' }
   return { data: data as BiData }
 }
