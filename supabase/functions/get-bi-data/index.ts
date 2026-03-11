@@ -26,6 +26,8 @@ interface SyntageInvoice {
   receiver: { rfc: string; name: string }
 }
 
+const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
 function getMonthKey(dateStr: string): string {
   const d = new Date(dateStr)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -86,7 +88,7 @@ serve(async (req) => {
         const d = new Date(now)
         d.setMonth(d.getMonth() - i)
         const key = getMonthKey(d.toISOString())
-        const label = d.toLocaleDateString('es-MX', { month: 'short' })
+        const label = MONTH_LABELS[d.getMonth()]
         map.set(key, { label, total: 0 })
       }
       return map
