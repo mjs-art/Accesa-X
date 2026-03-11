@@ -60,6 +60,7 @@ export interface BiData {
 
 export async function getBiData(): Promise<{ data: BiData } | { error: string }> {
   const supabase = createClient()
+  await supabase.auth.getUser() // refresh token first
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return { error: 'No autenticado' }
 
