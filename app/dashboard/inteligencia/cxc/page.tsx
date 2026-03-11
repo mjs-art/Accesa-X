@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getBiDataAction, type BiData } from '@/app/actions/bi'
+import { getBiData, type BiData } from '@/app/actions/bi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ export default function CxCPage() {
 
   async function load() {
     setLoading(true); setError(null)
-    const r = await getBiDataAction()
+    const r = await getBiData()
     if ('error' in r) setError(r.error); else setData(r.data)
     setLoading(false)
   }

@@ -1,6 +1,4 @@
-'use server'
-
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/client'
 
 export interface MesData {
   mes: string
@@ -60,13 +58,10 @@ export interface BiData {
   }
 }
 
-export async function getBiDataAction(): Promise<{ data: BiData } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autenticado' }
-
+// Client-side call — uses browser Supabase client (same pattern as get-dashboard-data)
+export async function getBiData(): Promise<{ data: BiData } | { error: string }> {
+  const supabase = createClient()
   const { data, error } = await supabase.functions.invoke('get-bi-data')
-
   if (error) return { error: error.message ?? 'Error al obtener datos de inteligencia' }
   if (!data) return { error: 'Sin datos' }
   return { data: data as BiData }

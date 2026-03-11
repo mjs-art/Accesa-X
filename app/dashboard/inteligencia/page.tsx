@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getBiDataAction, type BiData } from '@/app/actions/bi'
+import { getBiData, type BiData } from '@/app/actions/bi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -72,7 +72,7 @@ export default function InteligenciaPage() {
   async function load() {
     setLoading(true)
     setError(null)
-    const result = await getBiDataAction()
+    const result = await getBiData()
     if ('error' in result) setError(result.error)
     else setData(result.data)
     setLoading(false)
