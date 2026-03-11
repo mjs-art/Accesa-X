@@ -24,16 +24,18 @@ import {
 
 // ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
-  submitted:   { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  en_revision: { label: 'Revisando',   classes: 'bg-blue-50 text-blue-700 border-blue-200' },
-  aprobado:    { label: 'Aprobado',    classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rechazado:   { label: 'Rechazado',   classes: 'bg-red-50 text-red-700 border-red-200' },
+  submitted:        { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  en_revision:      { label: 'Revisando',       classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  aprobado:         { label: 'Aprobado',        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  fondos_liberados: { label: 'Fondos liberados', classes: 'bg-teal-50 text-teal-700 border-teal-200' },
+  en_ejecucion:     { label: 'En ejecución',    classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  liquidado:        { label: 'Liquidado',       classes: 'bg-slate-100 text-slate-600 border-slate-200' },
+  rechazado:        { label: 'Rechazado',       classes: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 const TIPO_LABELS: Record<string, string> = {
-  empresarial: 'Crédito empresarial',
+  proyecto:  'Crédito por proyecto',
   factoraje: 'Factoraje',
-  contrato: 'Crédito por contrato',
 }
 
 function RiesgoBadge({ nivel }: { nivel: 'alto' | 'medio' | 'bajo' }) {
@@ -98,7 +100,7 @@ export default function AdminSolicitudPage() {
     if ('notes' in result) setNotes(result.notes ?? [])
   }
 
-  async function changeStatus(newStatus: 'en_revision' | 'aprobado' | 'rechazado', auditText: string) {
+  async function changeStatus(newStatus: 'en_revision' | 'aprobado' | 'fondos_liberados' | 'en_ejecucion' | 'liquidado' | 'rechazado', auditText: string) {
     setUpdatingStatus(true)
     const result = await changeApplicationStatusAction(id, newStatus, auditText)
     if ('error' in result) {
@@ -120,9 +122,24 @@ export default function AdminSolicitudPage() {
   async function handleApprove() {
     const ok = await changeStatus('aprobado', 'Solicitud APROBADA')
     if (ok) {
-      toast({ title: '✅ Solicitud aprobada' })
+      toast({ title: 'Solicitud aprobada' })
       setApproveOpen(false)
     }
+  }
+
+  async function handleLiberarFondos() {
+    const ok = await changeStatus('fondos_liberados', 'Fondos liberados al cliente')
+    if (ok) toast({ title: 'Fondos marcados como liberados' })
+  }
+
+  async function handleEnEjecucion() {
+    const ok = await changeStatus('en_ejecucion', 'Proyecto marcado en ejecución')
+    if (ok) toast({ title: 'Marcado como en ejecución' })
+  }
+
+  async function handleLiquidar() {
+    const ok = await changeStatus('liquidado', 'Crédito liquidado en su totalidad')
+    if (ok) toast({ title: 'Crédito marcado como liquidado' })
   }
 
   async function handleReject() {
@@ -222,10 +239,29 @@ export default function AdminSolicitudPage() {
           <Info label="Tipo de crédito" value={TIPO_LABELS[app.tipoCredito] ?? app.tipoCredito} />
           <Info label="Monto solicitado" value={<span className="text-base font-bold text-[#1A1A1A]">{formatMXN(app.montoSolicitado)}</span>} />
           <Info label="Plazo" value={`${app.plazoMeses} meses`} />
+          {app.resolvedAt && <Info label="Fecha resolución" value={formatDate(app.resolvedAt)} />}
+          {app.projectName && <Info label="Proyecto" value={app.projectName} />}
+          {app.clientName && <Info label="Cliente del proyecto" value={app.clientName} />}
+          {app.clientRfc && <Info label="RFC cliente" value={<span className="font-mono">{app.clientRfc}</span>} />}
+          {app.tipoCredito === 'factoraje' && (
+            <Info
+              label="Notificación al deudor"
+              value={app.notificacionDeudor ? 'Sí' : 'No'}
+            />
+          )}
+          {app.porcentajeAnticipo != null && (
+            <Info label="% anticipo aprobado" value={`${app.porcentajeAnticipo}%`} />
+          )}
           <div className="col-span-2">
             <p className="text-xs text-[#6B7280] mb-1.5">Destino del crédito</p>
             <p className="text-sm text-[#1A1A1A] bg-slate-50 rounded-lg p-3 leading-relaxed">{app.destino}</p>
           </div>
+          {app.analystNotes && (
+            <div className="col-span-2">
+              <p className="text-xs text-[#6B7280] mb-1.5">Notas del analista</p>
+              <p className="text-sm text-[#1A1A1A] bg-amber-50 border border-amber-100 rounded-lg p-3 leading-relaxed">{app.analystNotes}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -403,6 +439,33 @@ export default function AdminSolicitudPage() {
           >
             <CheckCircle2 className="h-4 w-4 mr-1.5" />
             Aprobar
+          </Button>
+
+          <Button
+            onClick={handleLiberarFondos}
+            disabled={updatingStatus || app.status !== 'aprobado'}
+            variant="outline"
+            className="border-teal-200 text-teal-700 hover:bg-teal-50 disabled:opacity-40"
+          >
+            Liberar fondos
+          </Button>
+
+          <Button
+            onClick={handleEnEjecucion}
+            disabled={updatingStatus || !['fondos_liberados'].includes(app.status)}
+            variant="outline"
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-40"
+          >
+            Marcar en ejecución
+          </Button>
+
+          <Button
+            onClick={handleLiquidar}
+            disabled={updatingStatus || app.status === 'liquidado'}
+            variant="outline"
+            className="border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          >
+            Liquidar
           </Button>
 
           <Button

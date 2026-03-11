@@ -1,10 +1,13 @@
-export type CreditType = 'empresarial' | 'factoraje' | 'contrato'
+export type CreditType = 'proyecto' | 'factoraje'
 
 export type ApplicationStatus =
   | 'submitted'
   | 'under_review'
   | 'en_revision'
   | 'aprobado'
+  | 'fondos_liberados'
+  | 'en_ejecucion'
+  | 'liquidado'
   | 'rechazado'
 
 export interface AdminCompany {
@@ -58,6 +61,13 @@ export interface ApplicationDetail {
   destino: string
   status: string
   createdAt: string
+  resolvedAt: string | null
+  clientRfc: string | null
+  clientName: string | null
+  projectName: string | null
+  notificacionDeudor: boolean
+  porcentajeAnticipo: number | null
+  analystNotes: string | null
   company: ApplicationCompanyDetail | null
   contract: ApplicationContract | null
 }

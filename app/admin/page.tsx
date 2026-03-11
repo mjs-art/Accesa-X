@@ -12,17 +12,19 @@ import { Button } from '@/components/ui/button'
 import { ChevronRight, Loader2, Search } from 'lucide-react'
 
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
-  submitted:   { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  under_review: { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  en_revision: { label: 'Revisando',   classes: 'bg-blue-50 text-blue-700 border-blue-200' },
-  aprobado:    { label: 'Aprobado',    classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rechazado:   { label: 'Rechazado',   classes: 'bg-red-50 text-red-700 border-red-200' },
+  submitted:        { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  under_review:     { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  en_revision:      { label: 'Revisando',       classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  aprobado:         { label: 'Aprobado',        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  fondos_liberados: { label: 'Fondos liberados', classes: 'bg-teal-50 text-teal-700 border-teal-200' },
+  en_ejecucion:     { label: 'En ejecución',    classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  liquidado:        { label: 'Liquidado',       classes: 'bg-slate-100 text-slate-600 border-slate-200' },
+  rechazado:        { label: 'Rechazado',       classes: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 const TIPO_CONFIG: Record<string, { label: string; classes: string }> = {
-  empresarial: { label: 'Empresarial', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
-  factoraje:   { label: 'Factoraje',   classes: 'bg-purple-50 text-purple-700 border-purple-200' },
-  contrato:    { label: 'Por contrato', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  proyecto:  { label: 'Por proyecto', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  factoraje: { label: 'Factoraje',    classes: 'bg-purple-50 text-purple-700 border-purple-200' },
 }
 
 function formatMXN(n: number) {
@@ -93,6 +95,9 @@ export default function AdminPage() {
           <option value="submitted">En revisión</option>
           <option value="en_revision">Revisando</option>
           <option value="aprobado">Aprobado</option>
+          <option value="fondos_liberados">Fondos liberados</option>
+          <option value="en_ejecucion">En ejecución</option>
+          <option value="liquidado">Liquidado</option>
           <option value="rechazado">Rechazado</option>
         </select>
 
@@ -102,9 +107,8 @@ export default function AdminPage() {
           className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
         >
           <option value="">Todos los tipos</option>
-          <option value="empresarial">Empresarial</option>
+          <option value="proyecto">Por proyecto</option>
           <option value="factoraje">Factoraje</option>
-          <option value="contrato">Por contrato</option>
         </select>
 
         {(search || statusFilter || tipoFilter) && (

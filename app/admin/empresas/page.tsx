@@ -11,16 +11,18 @@ import { CheckCircle2, Loader2, Search, XCircle } from 'lucide-react'
 
 // ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
-  submitted:   { label: 'En revisión', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  en_revision: { label: 'Revisando',   classes: 'bg-blue-50 text-blue-700 border-blue-200' },
-  aprobado:    { label: 'Aprobado',    classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rechazado:   { label: 'Rechazado',   classes: 'bg-red-50 text-red-700 border-red-200' },
+  submitted:        { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  en_revision:      { label: 'Revisando',       classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  aprobado:         { label: 'Aprobado',        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  fondos_liberados: { label: 'Fondos liberados', classes: 'bg-teal-50 text-teal-700 border-teal-200' },
+  en_ejecucion:     { label: 'En ejecución',    classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  liquidado:        { label: 'Liquidado',       classes: 'bg-slate-100 text-slate-600 border-slate-200' },
+  rechazado:        { label: 'Rechazado',       classes: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 const TIPO_CONFIG: Record<string, { label: string; classes: string }> = {
-  empresarial: { label: 'Empresarial', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
-  factoraje:   { label: 'Factoraje',   classes: 'bg-purple-50 text-purple-700 border-purple-200' },
-  contrato:    { label: 'Por contrato', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  proyecto:  { label: 'Por proyecto', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  factoraje: { label: 'Factoraje',    classes: 'bg-purple-50 text-purple-700 border-purple-200' },
 }
 
 function formatMXN(n: number) {

@@ -56,6 +56,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
       .from('credit_applications')
       .select(`
         id, tipo_credito, monto_solicitado, plazo_meses, destino, status, created_at,
+        resolved_at, client_rfc, client_name, project_name,
+        notificacion_deudor, porcentaje_anticipo, analyst_notes,
         companies ( nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat ),
         contracts:contract_id ( storage_path, monto_contrato, analysis_result )
       `)
@@ -177,6 +179,13 @@ export class SupabaseAdminRepository implements IAdminRepository {
       destino: row.destino as string,
       status: row.status as string,
       createdAt: row.created_at as string,
+      resolvedAt: row.resolved_at as string | null,
+      clientRfc: row.client_rfc as string | null,
+      clientName: row.client_name as string | null,
+      projectName: row.project_name as string | null,
+      notificacionDeudor: (row.notificacion_deudor as boolean) ?? false,
+      porcentajeAnticipo: row.porcentaje_anticipo as number | null,
+      analystNotes: row.analyst_notes as string | null,
       company,
       contract,
     }
