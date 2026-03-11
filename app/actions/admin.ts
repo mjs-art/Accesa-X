@@ -92,3 +92,198 @@ export async function getSignedDownloadUrlAction(storagePath: string) {
   if (!signedUrl) return { error: 'No se pudo generar el enlace' }
   return { success: true, signedUrl }
 }
+
+// ── Análisis financiero de una empresa (para admin) ────────────────────────────
+
+export interface AdminFinancialAnalisis {
+  dso: number
+  dpo: number
+  dsoStatus: 'verde' | 'amarillo' | 'rojo'
+  dpoStatus: 'verde' | 'amarillo' | 'rojo'
+  capitalTrabajo: number
+  totalPorCobrar: number
+  totalPorPagar: number
+  concentracionTop: number
+  topClienteNombre: string
+  concentracionStatus: 'verde' | 'amarillo' | 'rojo'
+  ratioGastos: number
+  ingresosMes: number
+  gastosMes: number
+  ratioStatus: 'verde' | 'amarillo' | 'rojo'
+  totalIngresos12m: number
+  synced: boolean
+}
+
+function monthKeyAdmin(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function daysSinceAdmin(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
+}
+
+export async function getCompanyFinancialAnalisisAction(
+  companyId: string,
+  companyRfc: string
+): Promise<AdminFinancialAnalisis | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { count } = await supabase
+    .from('cfdis').select('id', { count: 'exact', head: true }).eq('company_id', companyId)
+
+  if (!count || count === 0) {
+    return {
+      dso: 0, dpo: 0, dsoStatus: 'verde', dpoStatus: 'verde',
+      capitalTrabajo: 0, totalPorCobrar: 0, totalPorPagar: 0,
+      concentracionTop: 0, topClienteNombre: '—', concentracionStatus: 'verde',
+      ratioGastos: 0, ingresosMes: 0, gastosMes: 0, ratioStatus: 'verde',
+      totalIngresos12m: 0, synced: false,
+    }
+  }
+
+  const since12m = new Date()
+  since12m.setMonth(since12m.getMonth() - 11)
+  since12m.setDate(1)
+
+  const [emitidosRes, recibidosRes, cxcRes, cxpRes] = await Promise.all([
+    supabase.from('cfdis').select('total, issued_at, receiver_rfc, receiver_name')
+      .eq('company_id', companyId).eq('issuer_rfc', companyRfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+      .gte('issued_at', since12m.toISOString()),
+    supabase.from('cfdis').select('total, issued_at')
+      .eq('company_id', companyId).eq('receiver_rfc', companyRfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+      .gte('issued_at', since12m.toISOString()),
+    supabase.from('cfdis').select('due_amount, issued_at')
+      .eq('company_id', companyId).eq('issuer_rfc', companyRfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
+    supabase.from('cfdis').select('due_amount, issued_at')
+      .eq('company_id', companyId).eq('receiver_rfc', companyRfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
+  ])
+
+  const emitidos = emitidosRes.data ?? []
+  const recibidos = recibidosRes.data ?? []
+  const cxcRows = cxcRes.data ?? []
+  const cxpRows = cxpRes.data ?? []
+
+  const now = new Date()
+  const cutoff90 = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  const currentKey = monthKeyAdmin(now.toISOString())
+
+  let totalIngresos12m = 0, ingresos90 = 0, ingresosMes = 0
+  const byCliente: Record<string, { nombre: string; total: number }> = {}
+
+  for (const r of emitidos) {
+    const t = r.total ?? 0
+    totalIngresos12m += t
+    if (new Date(r.issued_at) >= cutoff90) ingresos90 += t
+    if (monthKeyAdmin(r.issued_at) === currentKey) ingresosMes += t
+    const rfc = r.receiver_rfc?.toUpperCase() ?? 'DESCONOCIDO'
+    if (!byCliente[rfc]) byCliente[rfc] = { nombre: r.receiver_name ?? rfc, total: 0 }
+    byCliente[rfc].total += t
+  }
+
+  let gastos90 = 0, gastosMes = 0
+  for (const r of recibidos) {
+    const t = r.total ?? 0
+    if (new Date(r.issued_at) >= cutoff90) gastos90 += t
+    if (monthKeyAdmin(r.issued_at) === currentKey) gastosMes += t
+  }
+
+  const totalPorCobrar = cxcRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const totalPorPagar = cxpRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const dso = ingresos90 > 0 ? Math.round((totalPorCobrar / ingresos90) * 90) : 0
+  const dpo = gastos90 > 0 ? Math.round((totalPorPagar / gastos90) * 90) : 0
+
+  const topCliente = Object.entries(byCliente).sort((a, b) => b[1].total - a[1].total)[0]
+  const concentracionTop = totalIngresos12m > 0 && topCliente
+    ? Math.round((topCliente[1].total / totalIngresos12m) * 100) : 0
+  const ratioRaw = ingresosMes > 0 ? gastosMes / ingresosMes : 0
+
+  return {
+    dso, dpo,
+    dsoStatus: dso <= 30 ? 'verde' : dso <= 60 ? 'amarillo' : 'rojo',
+    dpoStatus: dpo <= 45 ? 'verde' : dpo <= 75 ? 'amarillo' : 'rojo',
+    capitalTrabajo: totalPorCobrar - totalPorPagar,
+    totalPorCobrar, totalPorPagar,
+    concentracionTop, topClienteNombre: topCliente?.[1].nombre ?? '—',
+    concentracionStatus: concentracionTop < 30 ? 'verde' : concentracionTop < 50 ? 'amarillo' : 'rojo',
+    ratioGastos: Math.round(ratioRaw * 100),
+    ingresosMes, gastosMes,
+    ratioStatus: ratioRaw < 0.7 ? 'verde' : ratioRaw < 0.9 ? 'amarillo' : 'rojo',
+    totalIngresos12m, synced: true,
+  }
+}
+
+// ── Docs de financiamiento (para admin) ───────────────────────────────────────
+
+export async function getFinanciamientoDocumentosAction(applicationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data } = await supabase
+    .from('financiamiento_documentos')
+    .select('*')
+    .eq('credit_application_id', applicationId)
+    .order('uploaded_at')
+
+  return { docs: data ?? [] }
+}
+
+// ── Proveedor del proyecto (para admin) ───────────────────────────────────────
+
+export async function getProjectVendorAdminAction(applicationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data } = await supabase
+    .from('project_vendors')
+    .select('*')
+    .eq('credit_application_id', applicationId)
+    .limit(1)
+    .single()
+
+  return { vendor: data ?? null }
+}
+
+export async function verificarProveedorAdminAction(
+  vendorId: string,
+  campo: 'clabe' | 'rfc'
+): Promise<{ ok: boolean } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const update = campo === 'clabe'
+    ? { clabe_verificada: true, verificado_por: user.id, verificado_at: new Date().toISOString() }
+    : { rfc_verificado: true, verificado_por: user.id, verificado_at: new Date().toISOString() }
+
+  const { error } = await supabase.from('project_vendors').update(update).eq('id', vendorId)
+  if (error) return { error: error.message }
+  return { ok: true }
+}
+
+export async function getFinanciamientoSignedUrlAction(storagePath: string): Promise<{ url: string } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data, error } = await supabase.storage
+    .from('financiamiento-docs')
+    .createSignedUrl(storagePath, 3600)
+
+  if (error) return { error: error.message }
+  return { url: data.signedUrl }
+}

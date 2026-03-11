@@ -4,6 +4,7 @@ export type ApplicationStatus =
   | 'submitted'
   | 'under_review'
   | 'en_revision'
+  | 'docs_pendientes'
   | 'aprobado'
   | 'fondos_liberados'
   | 'en_ejecucion'
@@ -46,6 +47,7 @@ export interface ApplicationContract {
 }
 
 export interface ApplicationCompanyDetail {
+  id: string
   nombreRazonSocial: string
   rfc: string
   industria: string | null

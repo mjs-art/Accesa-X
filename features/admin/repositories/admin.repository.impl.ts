@@ -58,7 +58,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
         id, tipo_credito, monto_solicitado, plazo_meses, destino, status, created_at,
         resolved_at, client_rfc, client_name, project_name,
         notificacion_deudor, porcentaje_anticipo, analyst_notes,
-        companies ( nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat ),
+        companies ( id, nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat ),
         contracts:contract_id ( storage_path, monto_contrato, analysis_result )
       `)
       .eq('id', id)
@@ -155,6 +155,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     const company: ApplicationCompanyDetail | null = c
       ? {
+          id: c.id as string,
           nombreRazonSocial: c.nombre_razon_social as string,
           rfc: c.rfc as string,
           industria: c.industria as string | null,

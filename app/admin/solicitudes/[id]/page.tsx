@@ -8,8 +8,14 @@ import {
   changeApplicationStatusAction,
   addNoteAction,
   getSignedDownloadUrlAction,
+  getCompanyFinancialAnalisisAction,
+  getFinanciamientoDocumentosAction,
+  getProjectVendorAdminAction,
+  verificarProveedorAdminAction,
+  getFinanciamientoSignedUrlAction,
 } from '@/app/actions/admin'
 import type { ApplicationDetail, InternalNote } from '@/features/admin/types/admin.types'
+import type { AdminFinancialAnalisis } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -72,6 +78,10 @@ export default function AdminSolicitudPage() {
   const [app, setApp] = useState<ApplicationDetail | null>(null)
   const [notes, setNotes] = useState<InternalNote[]>([])
   const [loading, setLoading] = useState(true)
+  const [analisis, setAnalisis] = useState<AdminFinancialAnalisis | null>(null)
+  const [financDocs, setFinancDocs] = useState<Array<{ id: string; tipo: string; storage_path: string; nombre_archivo: string | null }>>([])
+  const [vendor, setVendor] = useState<{ id: string; vendor_name: string; vendor_rfc: string; clabe: string; monto_asignado: number; clabe_verificada: boolean; rfc_verificado: boolean } | null>(null)
+  const [verifying, setVerifying] = useState<string | null>(null)
 
   const [newNote, setNewNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
@@ -86,12 +96,24 @@ export default function AdminSolicitudPage() {
 
   async function init() {
     setLoading(true)
-    const [appResult, notesResult] = await Promise.all([
+    const [appResult, notesResult, docsResult, vendorResult] = await Promise.all([
       getApplicationWithDetailsAction(id),
       getNotesAction(id),
+      getFinanciamientoDocumentosAction(id),
+      getProjectVendorAdminAction(id),
     ])
-    if ('application' in appResult) setApp(appResult.application ?? null)
+    const appData = 'application' in appResult ? appResult.application ?? null : null
+    if (appData) {
+      setApp(appData)
+      // Load financial analysis if company has RFC
+      if (appData.company?.id && appData.company?.rfc) {
+        const analisisResult = await getCompanyFinancialAnalisisAction(appData.company.id, appData.company.rfc)
+        if (!('error' in analisisResult)) setAnalisis(analisisResult)
+      }
+    }
     if ('notes' in notesResult) setNotes(notesResult.notes ?? [])
+    if ('docs' in docsResult) setFinancDocs(docsResult.docs as typeof financDocs)
+    if ('vendor' in vendorResult) setVendor(vendorResult.vendor as typeof vendor)
     setLoading(false)
   }
 
@@ -100,7 +122,7 @@ export default function AdminSolicitudPage() {
     if ('notes' in result) setNotes(result.notes ?? [])
   }
 
-  async function changeStatus(newStatus: 'en_revision' | 'aprobado' | 'fondos_liberados' | 'en_ejecucion' | 'liquidado' | 'rechazado', auditText: string) {
+  async function changeStatus(newStatus: 'en_revision' | 'docs_pendientes' | 'aprobado' | 'fondos_liberados' | 'en_ejecucion' | 'liquidado' | 'rechazado', auditText: string) {
     setUpdatingStatus(true)
     const result = await changeApplicationStatusAction(id, newStatus, auditText)
     if ('error' in result) {
@@ -169,6 +191,23 @@ export default function AdminSolicitudPage() {
     const result = await getSignedDownloadUrlAction(storagePath)
     if ('signedUrl' in result) window.open(result.signedUrl, '_blank')
     else toast({ title: 'No se pudo generar el enlace de descarga', variant: 'destructive' })
+  }
+
+  async function handleVerificar(campo: 'clabe' | 'rfc') {
+    if (!vendor) return
+    setVerifying(campo)
+    const res = await verificarProveedorAdminAction(vendor.id, campo)
+    setVerifying(null)
+    if ('ok' in res) {
+      setVendor(prev => prev ? { ...prev, [`${campo}_verificada`]: true, rfc_verificado: campo === 'rfc' ? true : prev.rfc_verificado, clabe_verificada: campo === 'clabe' ? true : prev.clabe_verificada } : prev)
+      toast({ title: `${campo === 'clabe' ? 'CLABE' : 'RFC'} marcado como verificado` })
+    }
+  }
+
+  async function handleOpenFinancDoc(path: string) {
+    const res = await getFinanciamientoSignedUrlAction(path)
+    if ('url' in res) window.open(res.url, '_blank')
+    else toast({ title: 'No se pudo abrir el documento', variant: 'destructive' })
   }
 
   if (loading) {
@@ -265,7 +304,130 @@ export default function AdminSolicitudPage() {
         </CardContent>
       </Card>
 
-      {/* ── Sección 3: Contrato de respaldo ───────────────────────────────── */}
+      {/* ── Sección 3: Análisis financiero del solicitante ─────────────────── */}
+      {analisis && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader><CardTitle className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Análisis financiero del solicitante</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {!analisis.synced ? (
+              <p className="text-sm text-[#6B7280]">Sin datos SAT sincronizados para esta empresa.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: 'DSO', value: `${analisis.dso}d`, status: analisis.dsoStatus, hint: 'Días de cobro' },
+                    { label: 'DPO', value: `${analisis.dpo}d`, status: analisis.dpoStatus, hint: 'Días de pago' },
+                    { label: 'Concentración', value: `${analisis.concentracionTop}%`, status: analisis.concentracionStatus, hint: analisis.topClienteNombre },
+                    { label: 'Gastos/Ingresos', value: `${analisis.ratioGastos}%`, status: analisis.ratioStatus, hint: 'Ratio mes actual' },
+                  ].map(ind => {
+                    const colors = ind.status === 'verde'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : ind.status === 'amarillo'
+                      ? 'bg-amber-50 border-amber-200 text-amber-700'
+                      : 'bg-red-50 border-red-200 text-red-700'
+                    return (
+                      <div key={ind.label} className={`rounded-xl border p-3 ${colors}`}>
+                        <p className="text-xs font-semibold opacity-70">{ind.label}</p>
+                        <p className="text-xl font-bold text-[#1A1A1A] mt-1">{ind.value}</p>
+                        <p className="text-xs opacity-60 mt-0.5 truncate">{ind.hint}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Por cobrar', value: formatMXN(analisis.totalPorCobrar) },
+                    { label: 'Por pagar', value: formatMXN(analisis.totalPorPagar) },
+                    { label: 'Capital de trabajo', value: formatMXN(analisis.capitalTrabajo), highlight: analisis.capitalTrabajo < 0 },
+                  ].map(item => (
+                    <div key={item.label} className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-[#6B7280]">{item.label}</p>
+                      <p className={`text-sm font-bold mt-0.5 ${item.highlight ? 'text-red-600' : 'text-[#1A1A1A]'}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Sección 4: Proveedor a pagar ───────────────────────────────────── */}
+      {vendor && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader><CardTitle className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Proveedor a pagar — Verificación</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Info label="Empresa" value={vendor.vendor_name} />
+              <Info label="RFC" value={<span className="font-mono">{vendor.vendor_rfc}</span>} />
+              <Info label="CLABE" value={<span className="font-mono tracking-widest">{vendor.clabe}</span>} />
+              <Info label="Monto a desembolsar" value={<span className="font-bold text-base">{formatMXN(vendor.monto_asignado)}</span>} />
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 pt-4">
+              <Button
+                onClick={() => handleVerificar('clabe')}
+                disabled={vendor.clabe_verificada || verifying === 'clabe'}
+                size="sm"
+                className={vendor.clabe_verificada ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50' : 'bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white'}
+              >
+                {verifying === 'clabe' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                {vendor.clabe_verificada ? 'CLABE verificada ✓' : 'Marcar CLABE verificada'}
+              </Button>
+              <Button
+                onClick={() => handleVerificar('rfc')}
+                disabled={vendor.rfc_verificado || verifying === 'rfc'}
+                size="sm"
+                variant="outline"
+                className={vendor.rfc_verificado ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-slate-200 text-[#6B7280]'}
+              >
+                {verifying === 'rfc' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                {vendor.rfc_verificado ? 'RFC verificado ✓' : 'Marcar RFC verificado'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Sección 5: Documentos del proyecto ─────────────────────────────── */}
+      {financDocs.length > 0 && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader><CardTitle className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Documentos del proyecto ({financDocs.length})</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {financDocs.map(doc => {
+                const labels: Record<string, string> = {
+                  orden_compra: 'Orden de compra',
+                  correo_pagador: 'Correo del pagador',
+                  contrato: 'Contrato del proyecto',
+                  factura_aceptada: 'Factura aceptada',
+                }
+                const isRequired = ['orden_compra', 'correo_pagador'].includes(doc.tipo)
+                return (
+                  <div key={doc.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-[#1A1A1A]">
+                          {labels[doc.tipo] ?? doc.tipo}
+                          {isRequired && <span className="ml-1.5 text-xs text-emerald-600 font-normal">✓ requerido</span>}
+                        </p>
+                        <p className="text-xs text-[#6B7280] truncate max-w-[240px]">{doc.nombre_archivo}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenFinancDoc(doc.storage_path)}
+                      className="gap-1.5 text-[#3CBEDB] border-[#3CBEDB]/20 hover:bg-[#3CBEDB]/5">
+                      <Download className="h-3.5 w-3.5" />
+                      Ver
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Sección 6: Contrato de respaldo ───────────────────────────────── */}
       {app.contract && (
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
@@ -475,6 +637,21 @@ export default function AdminSolicitudPage() {
             className="border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40"
           >
             Rechazar
+          </Button>
+
+          <Button
+            onClick={async () => {
+              const notas = prompt('Indica qué documentos adicionales se necesitan:')
+              if (!notas?.trim()) return
+              const ok = await changeStatus('docs_pendientes', `Documentos adicionales requeridos: ${notas.trim()}`)
+              if (ok) toast({ title: 'Solicitud regresada al cliente' })
+            }}
+            disabled={updatingStatus || ['docs_pendientes', 'liquidado', 'rechazado'].includes(app.status)}
+            variant="outline"
+            className="border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40"
+          >
+            <AlertTriangle className="h-4 w-4 mr-1.5" />
+            Pedir más docs
           </Button>
         </CardContent>
       </Card>
