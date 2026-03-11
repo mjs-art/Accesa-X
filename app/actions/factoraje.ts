@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendSolicitudRecibidaEmail } from '@/app/actions/email'
 
 const AUTO_APPROVAL_LIMIT = 2_000_000
 
@@ -172,6 +173,16 @@ export async function submitFactorajeAction(
     .eq('id', applicationId)
 
   if (error) return { error: error.message }
+
+  // Fire-and-forget email
+  void (async () => {
+    const { data: co } = await supabase.from('companies').select('nombre_razon_social, user_id').eq('id', company.id).single()
+    if (co) {
+      const { data: au } = await supabase.auth.admin.getUserById(co.user_id)
+      if (au?.user?.email)
+        await sendSolicitudRecibidaEmail(au.user.email, co.nombre_razon_social, app.monto_solicitado ?? 0, 'factoraje', applicationId)
+    }
+  })()
 
   revalidatePath('/dashboard/credito')
   revalidatePath(`/dashboard/credito/${applicationId}`)

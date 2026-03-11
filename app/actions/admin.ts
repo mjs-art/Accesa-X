@@ -4,6 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { SupabaseAdminRepository } from '@/features/admin/repositories/admin.repository.impl'
 import { AdminService } from '@/features/admin/services/admin.service'
 import type { ApplicationStatus } from '@/features/admin/types/admin.types'
+import {
+  sendSolicitudAprobadaEmail,
+  sendSolicitudRechazadaEmail,
+  sendDocsPendientesEmail,
+  sendFondosLiberadosEmail,
+} from '@/app/actions/email'
 
 function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
   return new AdminService(new SupabaseAdminRepository(supabase))
@@ -42,9 +48,58 @@ export async function changeApplicationStatusAction(
   try {
     const service = buildService(supabase)
     await service.changeStatus(id, newStatus, user.id, user.email ?? 'admin', auditText)
+
+    // Send email notification to applicant (fire-and-forget)
+    void sendStatusEmail(supabase, id, newStatus, auditText)
+
     return { success: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al actualizar estado' }
+  }
+}
+
+async function sendStatusEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  applicationId: string,
+  newStatus: ApplicationStatus,
+  auditText: string,
+) {
+  const notifyStatuses: ApplicationStatus[] = ['aprobado', 'rechazado', 'docs_pendientes', 'fondos_liberados']
+  if (!notifyStatuses.includes(newStatus)) return
+
+  // Get application + company + owner email
+  const { data: app } = await supabase
+    .from('credit_applications')
+    .select('monto_solicitado, tipo_credito, company_id')
+    .eq('id', applicationId)
+    .single()
+  if (!app) return
+
+  const { data: company } = await supabase
+    .from('companies')
+    .select('nombre_razon_social, user_id')
+    .eq('id', app.company_id)
+    .single()
+  if (!company) return
+
+  const { data: authUser } = await supabase.auth.admin.getUserById(company.user_id)
+  const email = authUser?.user?.email
+  if (!email) return
+
+  const empresa = company.nombre_razon_social
+  const monto = app.monto_solicitado ?? 0
+  const tipo = app.tipo_credito as 'proyecto' | 'factoraje'
+
+  if (newStatus === 'aprobado') {
+    await sendSolicitudAprobadaEmail(email, empresa, monto, tipo, applicationId)
+  } else if (newStatus === 'rechazado') {
+    const motivo = auditText.replace(/^Solicitud RECHAZADA\. Razón: /, '')
+    await sendSolicitudRechazadaEmail(email, empresa, monto, motivo, applicationId)
+  } else if (newStatus === 'docs_pendientes') {
+    const notas = auditText.replace(/^Documentos adicionales requeridos: /, '')
+    await sendDocsPendientesEmail(email, empresa, notas, applicationId)
+  } else if (newStatus === 'fondos_liberados') {
+    await sendFondosLiberadosEmail(email, empresa, monto, applicationId)
   }
 }
 

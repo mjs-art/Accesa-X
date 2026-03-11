@@ -9,30 +9,37 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { ChevronRight, Loader2, Search } from 'lucide-react'
+import { ChevronRight, Loader2, Search, RefreshCw } from 'lucide-react'
 
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
-  submitted:        { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  under_review:     { label: 'En revisión',     classes: 'bg-amber-50 text-amber-700 border-amber-200' },
-  en_revision:      { label: 'Revisando',       classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  borrador:         { label: 'Borrador',        classes: 'bg-slate-100 text-slate-600 border-slate-200' },
+  submitted:        { label: 'Enviada',         classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+  en_revision:      { label: 'En revisión',     classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+  docs_pendientes:  { label: 'Docs pendientes', classes: 'bg-orange-50 text-orange-700 border-orange-200' },
   aprobado:         { label: 'Aprobado',        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  fondos_liberados: { label: 'Fondos liberados', classes: 'bg-teal-50 text-teal-700 border-teal-200' },
+  fondos_liberados: { label: 'Fondos liberados',classes: 'bg-teal-50 text-teal-700 border-teal-200' },
   en_ejecucion:     { label: 'En ejecución',    classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   liquidado:        { label: 'Liquidado',       classes: 'bg-slate-100 text-slate-600 border-slate-200' },
   rechazado:        { label: 'Rechazado',       classes: 'bg-red-50 text-red-700 border-red-200' },
 }
 
 const TIPO_CONFIG: Record<string, { label: string; classes: string }> = {
-  proyecto:  { label: 'Por proyecto', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  factoraje: { label: 'Factoraje',    classes: 'bg-purple-50 text-purple-700 border-purple-200' },
+  proyecto:  { label: 'Por proyecto', classes: 'bg-sky-50 text-sky-700 border-sky-200' },
+  factoraje: { label: 'Factoraje',    classes: 'bg-violet-50 text-violet-700 border-violet-200' },
 }
 
 function formatMXN(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 }
-
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+interface KPI {
+  label: string
+  value: string
+  sub: string
+  color: string
 }
 
 export default function AdminPage() {
@@ -65,16 +72,70 @@ export default function AdminPage() {
     return matchSearch && matchStatus && matchTipo
   })
 
+  // ── KPIs ────────────────────────────────────────────────────────────────────
+  const pendientes = applications.filter(a => ['submitted', 'en_revision', 'docs_pendientes'].includes(a.status))
+  const activas = applications.filter(a => ['aprobado', 'fondos_liberados', 'en_ejecucion'].includes(a.status))
+  const montoPendiente = pendientes.reduce((s, a) => s + a.montoSolicitado, 0)
+  const montoActivo = activas.reduce((s, a) => s + a.montoSolicitado, 0)
+  const docsPendientes = applications.filter(a => a.status === 'docs_pendientes').length
+
+  const kpis: KPI[] = [
+    {
+      label: 'Por revisar',
+      value: String(pendientes.length),
+      sub: montoPendiente > 0 ? formatMXN(montoPendiente) : 'Sin solicitudes',
+      color: pendientes.length > 0 ? 'border-l-amber-400' : 'border-l-slate-200',
+    },
+    {
+      label: 'Cartera activa',
+      value: String(activas.length),
+      sub: montoActivo > 0 ? formatMXN(montoActivo) : 'Sin créditos activos',
+      color: activas.length > 0 ? 'border-l-emerald-400' : 'border-l-slate-200',
+    },
+    {
+      label: 'Docs pendientes',
+      value: String(docsPendientes),
+      sub: docsPendientes > 0 ? 'Esperando al cliente' : 'Todo al día',
+      color: docsPendientes > 0 ? 'border-l-orange-400' : 'border-l-slate-200',
+    },
+    {
+      label: 'Total solicitudes',
+      value: String(applications.length),
+      sub: `${applications.filter(a => a.status === 'liquidado').length} liquidadas`,
+      color: 'border-l-[#3CBEDB]',
+    },
+  ]
+
   return (
     <div className="px-8 py-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Solicitudes de crédito</h1>
-        <p className="text-sm text-[#6B7280] mt-0.5">{applications.length} solicitudes en total</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Panel de administración</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">Solicitudes de crédito AccesaX</p>
+        </div>
+        <button onClick={fetchAll} disabled={loading}
+          className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-40 transition-colors">
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Actualizar
+        </button>
       </div>
 
+      {/* KPIs */}
+      {!loading && (
+        <div className="grid grid-cols-4 gap-4">
+          {kpis.map(k => (
+            <div key={k.label} className={`bg-white rounded-xl border border-slate-200 border-l-4 ${k.color} px-5 py-4 shadow-sm`}>
+              <p className="text-xs text-[#6B7280] font-medium">{k.label}</p>
+              <p className="text-3xl font-bold text-[#1A1A1A] mt-1">{k.value}</p>
+              <p className="text-xs text-[#6B7280] mt-1 truncate">{k.sub}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
           <input
@@ -92,8 +153,9 @@ export default function AdminPage() {
           className="h-9 px-3 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
         >
           <option value="">Todos los estatus</option>
-          <option value="submitted">En revisión</option>
-          <option value="en_revision">Revisando</option>
+          <option value="submitted">Enviada</option>
+          <option value="en_revision">En revisión</option>
+          <option value="docs_pendientes">Docs pendientes</option>
           <option value="aprobado">Aprobado</option>
           <option value="fondos_liberados">Fondos liberados</option>
           <option value="en_ejecucion">En ejecución</option>
@@ -119,6 +181,10 @@ export default function AdminPage() {
             Limpiar
           </button>
         )}
+
+        {filtered.length !== applications.length && (
+          <span className="text-xs text-[#6B7280]">{filtered.length} de {applications.length}</span>
+        )}
       </div>
 
       {/* Tabla */}
@@ -138,7 +204,6 @@ export default function AdminPage() {
                 <TableHead className="text-xs font-semibold text-[#6B7280] pl-6">Empresa</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Tipo</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Monto</TableHead>
-                <TableHead className="text-xs font-semibold text-[#6B7280]">Plazo</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Estatus</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Fecha</TableHead>
                 <TableHead className="pr-6" />
@@ -148,8 +213,9 @@ export default function AdminPage() {
               {filtered.map((a) => {
                 const statusCfg = STATUS_CONFIG[a.status] ?? { label: a.status, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
                 const tipoCfg = TIPO_CONFIG[a.tipoCredito] ?? { label: a.tipoCredito, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
+                const isPending = ['submitted', 'en_revision', 'docs_pendientes'].includes(a.status)
                 return (
-                  <TableRow key={a.id} className="hover:bg-slate-50/60">
+                  <TableRow key={a.id} className={`hover:bg-slate-50/60 ${isPending ? 'bg-amber-50/20' : ''}`}>
                     <TableCell className="pl-6">
                       <p className="text-sm font-medium text-[#1A1A1A]">{a.company?.nombreRazonSocial ?? '—'}</p>
                       <p className="text-xs text-[#6B7280] font-mono">{a.company?.rfc ?? '—'}</p>
@@ -162,7 +228,6 @@ export default function AdminPage() {
                     <TableCell className="text-sm font-semibold text-[#1A1A1A]">
                       {formatMXN(a.montoSolicitado)}
                     </TableCell>
-                    <TableCell className="text-sm text-[#6B7280]">{a.plazoMeses} meses</TableCell>
                     <TableCell>
                       <Badge className={`${statusCfg.classes} border text-xs px-2 py-0.5 font-medium`}>
                         {statusCfg.label}
