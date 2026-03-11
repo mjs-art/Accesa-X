@@ -380,6 +380,141 @@ export async function getResumenAction(): Promise<ResumenData | { error: string 
   }
 }
 
+// ── Análisis de negocio ────────────────────────────────────────────────────────
+
+export interface AnalisisData {
+  dso: number
+  dpo: number
+  dsoStatus: 'verde' | 'amarillo' | 'rojo'
+  dpoStatus: 'verde' | 'amarillo' | 'rojo'
+  capitalTrabajo: number
+  totalPorCobrar: number
+  totalPorPagar: number
+  concentracionTop: number
+  topClienteNombre: string
+  concentracionStatus: 'verde' | 'amarillo' | 'rojo'
+  ratioGastos: number
+  ingresosMes: number
+  gastosMes: number
+  ratioStatus: 'verde' | 'amarillo' | 'rojo'
+  entradas30: number
+  entradas60: number
+  entradas90: number
+  totalIngresos12m: number
+  synced: boolean
+}
+
+export async function getAnalisisAction(): Promise<AnalisisData | { error: string }> {
+  const ctx = await getCompanyContext()
+  if (!ctx) return { error: 'No autenticado' }
+  const { supabase, company } = ctx
+
+  const { count } = await supabase
+    .from('cfdis')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', company.id)
+
+  if (!count || count === 0) {
+    return {
+      dso: 0, dpo: 0, dsoStatus: 'verde', dpoStatus: 'verde',
+      capitalTrabajo: 0, totalPorCobrar: 0, totalPorPagar: 0,
+      concentracionTop: 0, topClienteNombre: '—', concentracionStatus: 'verde',
+      ratioGastos: 0, ingresosMes: 0, gastosMes: 0, ratioStatus: 'verde',
+      entradas30: 0, entradas60: 0, entradas90: 0,
+      totalIngresos12m: 0, synced: false,
+    }
+  }
+
+  const since12m = new Date()
+  since12m.setMonth(since12m.getMonth() - 11)
+  since12m.setDate(1)
+
+  const [emitidosRes, recibidosRes, cxcRes, cxpRes] = await Promise.all([
+    supabase.from('cfdis')
+      .select('total, issued_at, receiver_rfc, receiver_name')
+      .eq('company_id', company.id).eq('issuer_rfc', company.rfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+      .gte('issued_at', since12m.toISOString()),
+    supabase.from('cfdis')
+      .select('total, issued_at')
+      .eq('company_id', company.id).eq('receiver_rfc', company.rfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+      .gte('issued_at', since12m.toISOString()),
+    supabase.from('cfdis')
+      .select('due_amount, issued_at')
+      .eq('company_id', company.id).eq('issuer_rfc', company.rfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
+    supabase.from('cfdis')
+      .select('due_amount, issued_at')
+      .eq('company_id', company.id).eq('receiver_rfc', company.rfc)
+      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
+  ])
+
+  const emitidos = emitidosRes.data ?? []
+  const recibidos = recibidosRes.data ?? []
+  const cxcRows = cxcRes.data ?? []
+  const cxpRows = cxpRes.data ?? []
+
+  const now = new Date()
+  const cutoff90 = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  const currentKey = monthKey(now.toISOString())
+
+  let totalIngresos12m = 0
+  let ingresos90 = 0
+  let ingresosMes = 0
+  const byCliente: Record<string, { nombre: string; total: number }> = {}
+
+  for (const r of emitidos) {
+    const t = r.total ?? 0
+    totalIngresos12m += t
+    if (new Date(r.issued_at) >= cutoff90) ingresos90 += t
+    if (monthKey(r.issued_at) === currentKey) ingresosMes += t
+    const rfc = r.receiver_rfc?.toUpperCase() ?? 'DESCONOCIDO'
+    if (!byCliente[rfc]) byCliente[rfc] = { nombre: r.receiver_name ?? rfc, total: 0 }
+    byCliente[rfc].total += t
+  }
+
+  let gastos90 = 0
+  let gastosMes = 0
+  for (const r of recibidos) {
+    const t = r.total ?? 0
+    if (new Date(r.issued_at) >= cutoff90) gastos90 += t
+    if (monthKey(r.issued_at) === currentKey) gastosMes += t
+  }
+
+  const totalPorCobrar = cxcRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const totalPorPagar = cxpRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
+
+  const entradas30 = cxcRows.filter(r => daysSince(r.issued_at) <= 30).reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const entradas60 = cxcRows.filter(r => daysSince(r.issued_at) <= 60).reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const entradas90 = cxcRows.filter(r => daysSince(r.issued_at) <= 90).reduce((s, r) => s + (r.due_amount ?? 0), 0)
+
+  const dso = ingresos90 > 0 ? Math.round((totalPorCobrar / ingresos90) * 90) : 0
+  const dpo = gastos90 > 0 ? Math.round((totalPorPagar / gastos90) * 90) : 0
+
+  const topCliente = Object.entries(byCliente).sort((a, b) => b[1].total - a[1].total)[0]
+  const concentracionTop = totalIngresos12m > 0 && topCliente
+    ? Math.round((topCliente[1].total / totalIngresos12m) * 100) : 0
+  const topClienteNombre = topCliente?.[1].nombre ?? '—'
+
+  const ratioRaw = ingresosMes > 0 ? gastosMes / ingresosMes : 0
+
+  return {
+    dso, dpo,
+    dsoStatus: dso <= 30 ? 'verde' : dso <= 60 ? 'amarillo' : 'rojo',
+    dpoStatus: dpo <= 45 ? 'verde' : dpo <= 75 ? 'amarillo' : 'rojo',
+    capitalTrabajo: totalPorCobrar - totalPorPagar,
+    totalPorCobrar, totalPorPagar,
+    concentracionTop, topClienteNombre,
+    concentracionStatus: concentracionTop < 30 ? 'verde' : concentracionTop < 50 ? 'amarillo' : 'rojo',
+    ratioGastos: Math.round(ratioRaw * 100),
+    ingresosMes, gastosMes,
+    ratioStatus: ratioRaw < 0.7 ? 'verde' : ratioRaw < 0.9 ? 'amarillo' : 'rojo',
+    entradas30, entradas60, entradas90,
+    totalIngresos12m, synced: true,
+  }
+}
+
 // ── Util: calcular aging buckets ───────────────────────────────────────────────
 
 function calcBuckets(facturas: FacturaPendiente[]): AgingBucket[] {
