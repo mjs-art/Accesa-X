@@ -66,16 +66,7 @@ export async function getBiData(): Promise<{ data: BiData } | { error: string }>
   if (!user) return { error: 'No autenticado' }
 
   const { data, error } = await supabase.functions.invoke('get-bi-data')
-  if (error) {
-    // Extract actual error body from Edge Function response
-    let detail = error.message ?? 'Error desconocido'
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const body = await (error as any).context?.json()
-      if (body?.error) detail = body.error
-    } catch { /* ignore */ }
-    return { error: detail }
-  }
+  if (error) return { error: error.message ?? 'Error desconocido' }
   if (!data) return { error: 'Sin datos' }
   return { data: data as BiData }
 }

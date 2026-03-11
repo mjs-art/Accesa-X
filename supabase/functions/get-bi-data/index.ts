@@ -179,5 +179,5 @@ function json(data: unknown) {
 }
 
 function jsonError(message: string, status: number) {
-  return new Response(JSON.stringify({ error: message }), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify({ message }), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
