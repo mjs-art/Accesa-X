@@ -43,14 +43,22 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
+    console.log('get-bi-data: request received', req.method)
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return jsonError('Unauthorized', 401)
+    if (!authHeader) {
+      console.error('get-bi-data: no auth header')
+      return jsonError('Unauthorized', 401)
+    }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: userError } = await userClient.auth.getUser()
-    if (userError || !user) return jsonError('Unauthorized', 401)
+    if (userError || !user) {
+      console.error('get-bi-data: auth failed', userError?.message)
+      return jsonError('Unauthorized', 401)
+    }
+    console.log('get-bi-data: user authenticated', user.id)
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const { data: company, error: companyError } = await adminClient
@@ -61,7 +69,11 @@ serve(async (req) => {
       .limit(1)
       .single()
 
-    if (companyError || !company) return jsonError('Empresa no encontrada', 404)
+    if (companyError || !company) {
+      console.error('get-bi-data: company not found', companyError?.message)
+      return jsonError('Empresa no encontrada', 404)
+    }
+    console.log('get-bi-data: company found', company.rfc)
 
     const baseParams = { type: 'I', status: 'VIGENTE', itemsPerPage: '1000', 'order[issuedAt]': 'desc' }
     const invoicesBase = `${SYNTAGE_BASE_URL}/taxpayers/${encodeURIComponent(company.rfc)}/invoices`
