@@ -1,54 +1,178 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, User, CreditCard, LogOut } from 'lucide-react'
+import {
+  LayoutDashboard, Users, BarChart3, CreditCard, User, LogOut,
+  ChevronDown, TrendingUp, TrendingDown, Clock, AlertCircle,
+  FileText, PlusCircle,
+} from 'lucide-react'
+import { useState } from 'react'
 import { signOutAction } from '@/app/actions/dashboard'
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Mi Perfil', href: '/dashboard/perfil', icon: User },
-  { label: 'Solicitar crédito', href: '/solicitar-credito', icon: CreditCard },
+type SubItem = { label: string; href: string; icon: React.ElementType }
+type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[] }
+
+const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: 'MI EMPRESA',
+    items: [
+      { label: 'Clientes', href: '/dashboard/clientes', icon: Users },
+      {
+        label: 'Inteligencia',
+        href: '/dashboard/inteligencia',
+        icon: BarChart3,
+        children: [
+          { label: 'Resumen', href: '/dashboard/inteligencia', icon: BarChart3 },
+          { label: 'Ingresos', href: '/dashboard/inteligencia/ingresos', icon: TrendingUp },
+          { label: 'Gastos', href: '/dashboard/inteligencia/gastos', icon: TrendingDown },
+          { label: 'Por cobrar', href: '/dashboard/inteligencia/cxc', icon: Clock },
+          { label: 'Por pagar', href: '/dashboard/inteligencia/cxp', icon: AlertCircle },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'FINANCIAMIENTO',
+    items: [
+      {
+        label: 'Crédito',
+        href: '/dashboard/credito',
+        icon: CreditCard,
+        children: [
+          { label: 'Mis solicitudes', href: '/dashboard/credito', icon: FileText },
+          { label: 'Nuevo proyecto', href: '/credito/proyecto/nuevo', icon: PlusCircle },
+          { label: 'Desc. facturas', href: '/credito/factoraje/nuevo', icon: PlusCircle },
+        ],
+      },
+    ],
+  },
+  {
+    items: [
+      { label: 'Mi Perfil', href: '/dashboard/perfil', icon: User },
+    ],
+  },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
 
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    NAV_SECTIONS.forEach(({ items }) =>
+      items.forEach((item) => {
+        if (item.children) {
+          const active = item.children.some(
+            (c) => pathname === c.href || pathname.startsWith(c.href + '/')
+          )
+          if (active) init[item.href] = true
+        }
+      })
+    )
+    return init
+  })
+
   async function handleLogout() {
     await signOutAction()
     router.push('/')
   }
 
+  function isActive(href: string) {
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  function toggle(href: string) {
+    setExpanded((prev) => ({ ...prev, [href]: !prev[href] }))
+  }
+
   return (
-    <aside className="fixed top-0 left-0 h-screen w-40 bg-[#1C1C1E] flex flex-col z-30">
+    <aside className="fixed top-0 left-0 h-screen w-56 bg-[#1C1C1E] flex flex-col z-30">
       {/* Logo */}
       <div className="px-4 pt-6 pb-5 border-b border-white/10">
         <div className="flex items-center gap-2">
-          {/* Accesa icon — simplified colorful pinwheel */}
           <AccesaIcon className="h-7 w-7 shrink-0" />
           <span className="text-white font-bold text-base tracking-tight">accesa</span>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 space-y-0.5 px-2">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
-          return (
-            <button
-              key={href}
-              onClick={() => router.push(href)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                active
-                  ? 'bg-[#2A2A2E] text-white'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#3CBEDB]' : ''}`} />
-              <span className="text-xs font-medium leading-tight">{label}</span>
-            </button>
-          )
-        })}
+      <nav className="flex-1 py-3 overflow-y-auto">
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si} className={si > 0 ? 'mt-1' : ''}>
+            {section.title && (
+              <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-white/30 uppercase">
+                {section.title}
+              </p>
+            )}
+            <div className="px-2 space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.href)
+                const open = expanded[item.href] ?? false
+                const hasChildren = !!item.children
+
+                return (
+                  <div key={item.href}>
+                    <button
+                      onClick={() => {
+                        if (hasChildren) {
+                          toggle(item.href)
+                          if (!open) router.push(item.href)
+                        } else {
+                          router.push(item.href)
+                        }
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                        active && !hasChildren
+                          ? 'bg-[#2A2A2E] text-white'
+                          : active && hasChildren
+                          ? 'text-white'
+                          : 'text-white/60 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#3CBEDB]' : ''}`} />
+                      <span className="text-xs font-medium leading-tight flex-1">{item.label}</span>
+                      {hasChildren && (
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
+                        />
+                      )}
+                    </button>
+
+                    {hasChildren && open && (
+                      <div className="ml-3 mt-0.5 pl-4 border-l border-white/10 space-y-0.5 mb-1">
+                        {item.children!.map((child) => {
+                          const childActive = pathname === child.href
+                          return (
+                            <button
+                              key={child.href}
+                              onClick={() => router.push(child.href)}
+                              className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors ${
+                                childActive
+                                  ? 'bg-[#2A2A2E] text-white'
+                                  : 'text-white/50 hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              <child.icon
+                                className={`h-3.5 w-3.5 shrink-0 ${childActive ? 'text-[#3CBEDB]' : ''}`}
+                              />
+                              <span className="text-xs leading-tight">{child.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Logout */}

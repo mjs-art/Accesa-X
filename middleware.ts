@@ -60,12 +60,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Redirect legacy: /solicitar-credito → /dashboard/credito
+  if (pathname === '/solicitar-credito') {
+    return NextResponse.redirect(new URL('/dashboard/credito', request.url))
+  }
+
   // /onboarding/invitado is public — invitees may not have a session
   if (pathname.startsWith('/onboarding/invitado')) {
     return supabaseResponse
   }
 
-  const protectedPaths = ['/dashboard', '/onboarding', '/solicitar-credito', '/admin']
+  const protectedPaths = ['/dashboard', '/onboarding', '/solicitar-credito', '/credito', '/admin']
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path))
 
   if (isProtected && !user) {
