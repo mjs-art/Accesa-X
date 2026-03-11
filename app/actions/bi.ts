@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/client'
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
 
 export interface MesData {
   mes: string
@@ -59,14 +61,11 @@ export interface BiData {
 }
 
 export async function getBiData(): Promise<{ data: BiData } | { error: string }> {
-  const supabase = createClient()
-  await supabase.auth.getUser() // refresh token first
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return { error: 'No autenticado' }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
 
-  const { data, error } = await supabase.functions.invoke('get-bi-data', {
-    headers: { Authorization: `Bearer ${session.access_token}` },
-  })
+  const { data, error } = await supabase.functions.invoke('get-bi-data')
   if (error) return { error: error.message ?? 'Error desconocido' }
   if (!data) return { error: 'Sin datos' }
   return { data: data as BiData }
