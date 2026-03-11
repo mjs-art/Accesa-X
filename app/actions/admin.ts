@@ -275,6 +275,55 @@ export async function verificarProveedorAdminAction(
   return { ok: true }
 }
 
+// ── CFDIs de factoraje (para admin) ───────────────────────────────────────────
+
+export interface AdminFactorajeCfdi {
+  id: string
+  cfdi_id: string
+  monto_nominal: number
+  aforo_pct: number
+  monto_a_dispersar: number
+  receiver_rfc: string
+  receiver_name: string | null
+  issued_at: string
+  cfdi_uuid: string
+}
+
+export async function getFactorajeCfdisAdminAction(
+  applicationId: string
+): Promise<AdminFactorajeCfdi[] | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { data: rows, error } = await supabase
+    .from('factoraje_cfdis')
+    .select('id, cfdi_id, monto_nominal, aforo_pct, monto_a_dispersar')
+    .eq('credit_application_id', applicationId)
+
+  if (error) return { error: error.message }
+  if (!rows?.length) return []
+
+  const { data: cfdis } = await supabase
+    .from('cfdis')
+    .select('id, cfdi_uuid, receiver_rfc, receiver_name, issued_at')
+    .in('id', rows.map(r => r.cfdi_id))
+
+  const cfdiMap: Record<string, { cfdi_uuid: string; receiver_rfc: string; receiver_name: string | null; issued_at: string }> = {}
+  for (const c of (cfdis ?? [])) cfdiMap[c.id] = c
+
+  return rows.map(r => ({
+    ...r,
+    cfdi_uuid: cfdiMap[r.cfdi_id]?.cfdi_uuid ?? '',
+    receiver_rfc: cfdiMap[r.cfdi_id]?.receiver_rfc ?? '',
+    receiver_name: cfdiMap[r.cfdi_id]?.receiver_name ?? null,
+    issued_at: cfdiMap[r.cfdi_id]?.issued_at ?? '',
+  }))
+}
+
 export async function getFinanciamientoSignedUrlAction(storagePath: string): Promise<{ url: string } | { error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

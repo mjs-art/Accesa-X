@@ -13,9 +13,10 @@ import {
   getProjectVendorAdminAction,
   verificarProveedorAdminAction,
   getFinanciamientoSignedUrlAction,
+  getFactorajeCfdisAdminAction,
 } from '@/app/actions/admin'
 import type { ApplicationDetail, InternalNote } from '@/features/admin/types/admin.types'
-import type { AdminFinancialAnalisis } from '@/app/actions/admin'
+import type { AdminFinancialAnalisis, AdminFactorajeCfdi } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -82,6 +83,7 @@ export default function AdminSolicitudPage() {
   const [financDocs, setFinancDocs] = useState<Array<{ id: string; tipo: string; storage_path: string; nombre_archivo: string | null }>>([])
   const [vendor, setVendor] = useState<{ id: string; vendor_name: string; vendor_rfc: string; clabe: string; monto_asignado: number; clabe_verificada: boolean; rfc_verificado: boolean } | null>(null)
   const [verifying, setVerifying] = useState<string | null>(null)
+  const [factorajeCfdis, setFactorajeCfdis] = useState<AdminFactorajeCfdi[]>([])
 
   const [newNote, setNewNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
@@ -96,11 +98,12 @@ export default function AdminSolicitudPage() {
 
   async function init() {
     setLoading(true)
-    const [appResult, notesResult, docsResult, vendorResult] = await Promise.all([
+    const [appResult, notesResult, docsResult, vendorResult, fcResult] = await Promise.all([
       getApplicationWithDetailsAction(id),
       getNotesAction(id),
       getFinanciamientoDocumentosAction(id),
       getProjectVendorAdminAction(id),
+      getFactorajeCfdisAdminAction(id),
     ])
     const appData = 'application' in appResult ? appResult.application ?? null : null
     if (appData) {
@@ -114,6 +117,7 @@ export default function AdminSolicitudPage() {
     if ('notes' in notesResult) setNotes(notesResult.notes ?? [])
     if ('docs' in docsResult) setFinancDocs(docsResult.docs as typeof financDocs)
     if ('vendor' in vendorResult) setVendor(vendorResult.vendor as typeof vendor)
+    if (Array.isArray(fcResult)) setFactorajeCfdis(fcResult)
     setLoading(false)
   }
 
@@ -303,6 +307,57 @@ export default function AdminSolicitudPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Sección 2b: CFDIs de factoraje ────────────────────────────────── */}
+      {factorajeCfdis.length > 0 && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader><CardTitle className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Facturas descontadas ({factorajeCfdis.length})</CardTitle></CardHeader>
+          <CardContent>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-xs text-[#6B7280] font-medium text-left pb-2">Deudor</th>
+                  <th className="text-xs text-[#6B7280] font-medium text-left pb-2">UUID</th>
+                  <th className="text-xs text-[#6B7280] font-medium text-right pb-2">Nominal</th>
+                  <th className="text-xs text-[#6B7280] font-medium text-right pb-2">Aforo</th>
+                  <th className="text-xs text-[#6B7280] font-medium text-right pb-2">A dispersar</th>
+                  <th className="text-xs text-[#6B7280] font-medium text-right pb-2">Emisión</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {factorajeCfdis.map(fc => (
+                  <tr key={fc.id}>
+                    <td className="py-2.5">
+                      <p className="text-xs font-medium text-[#1A1A1A] max-w-[160px] truncate">{fc.receiver_name ?? fc.receiver_rfc}</p>
+                      <p className="text-[10px] text-[#6B7280] font-mono">{fc.receiver_rfc}</p>
+                    </td>
+                    <td className="py-2.5 font-mono text-xs text-[#6B7280]">{fc.cfdi_uuid.slice(0, 8).toUpperCase()}…</td>
+                    <td className="py-2.5 text-right text-xs text-[#6B7280]">{formatMXN(fc.monto_nominal)}</td>
+                    <td className="py-2.5 text-right text-xs text-[#6B7280]">{fc.aforo_pct}%</td>
+                    <td className="py-2.5 text-right text-xs font-semibold text-emerald-600">{formatMXN(fc.monto_a_dispersar)}</td>
+                    <td className="py-2.5 text-right text-xs text-[#6B7280]">
+                      {fc.issued_at ? new Date(fc.issued_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-slate-200">
+                  <td className="pt-2.5 text-xs font-semibold text-[#1A1A1A]" colSpan={2}>Total</td>
+                  <td className="pt-2.5 text-right text-xs font-semibold text-[#1A1A1A]">
+                    {formatMXN(factorajeCfdis.reduce((s, r) => s + r.monto_nominal, 0))}
+                  </td>
+                  <td />
+                  <td className="pt-2.5 text-right text-xs font-bold text-emerald-600">
+                    {formatMXN(factorajeCfdis.reduce((s, r) => s + r.monto_a_dispersar, 0))}
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Sección 3: Análisis financiero del solicitante ─────────────────── */}
       {analisis && (
