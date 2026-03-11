@@ -58,19 +58,15 @@ export interface BiData {
   }
 }
 
-// Client-side call — uses browser Supabase client (same pattern as get-dashboard-data)
 export async function getBiData(): Promise<{ data: BiData } | { error: string }> {
   const supabase = createClient()
-  const { data, error } = await supabase.functions.invoke('get-bi-data')
-  if (error) {
-    // Try to extract the actual error body from the Edge Function response
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const body = await (error as any).context?.json?.()
-      if (body?.error) return { error: `[${body.error}]` }
-    } catch { /* ignore parse errors */ }
-    return { error: error.message ?? 'Error desconocido' }
-  }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { error: 'No autenticado' }
+
+  const { data, error } = await supabase.functions.invoke('get-bi-data', {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  })
+  if (error) return { error: error.message ?? 'Error desconocido' }
   if (!data) return { error: 'Sin datos' }
   return { data: data as BiData }
 }
