@@ -8,6 +8,7 @@ import {
   Loader2, RefreshCw, TrendingUp, TrendingDown, Clock, AlertCircle,
   CheckCircle2, AlertTriangle, XCircle, Wallet, Users, ArrowDownRight, ArrowUpRight,
 } from 'lucide-react'
+import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -106,6 +107,8 @@ export default function AnalisisPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Análisis del negocio</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">Indicadores clave para evaluar la salud financiera de tu empresa</p>
         </div>
+
+        <SyncBanner showWhenEmpty={!data?.synced} />
 
         {loading ? (
           <div className="flex items-center justify-center py-24">

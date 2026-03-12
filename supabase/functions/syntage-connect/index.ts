@@ -130,31 +130,28 @@ serve(async (req) => {
       })
       .eq('id', company_id)
 
-    // 8. Si válido, disparar extracciones CFDI y declaraciones
-    // POST /extractions — usa entity IRI y nombre de extractor correcto
+    // 8. Si válido, iniciar sincronización completa en background
+    //    sync-sat-full usa EdgeRuntime.waitUntil() — continúa aunque
+    //    el usuario cierre el tab. El jobId se retorna al cliente para
+    //    que pueda mostrar el progreso via Realtime.
+    let jobId: string | null = null
+
     if (status === 'valid') {
-      await Promise.all([
-        fetch(`${SYNTAGE_BASE_URL}/extractions`, {
-          method: 'POST',
-          headers: syntageHeaders,
-          body: JSON.stringify({
-            entity: entity_iri,
-            extractor: 'invoice', // CFDI emitidos y recibidos
-          }),
-        }),
-        fetch(`${SYNTAGE_BASE_URL}/extractions`, {
-          method: 'POST',
-          headers: syntageHeaders,
-          body: JSON.stringify({
-            entity: entity_iri,
-            extractor: 'annual_tax_return', // Declaraciones anuales
-          }),
-        }),
-      ])
+      try {
+        const syncRes = await adminClient.functions.invoke('sync-sat-full', {
+          body: { company_id },
+        })
+        if (syncRes.data?.jobId) {
+          jobId = syncRes.data.jobId
+        }
+      } catch (syncErr) {
+        // No fallar la validación si la invocación del sync falla
+        console.error('Error al invocar sync-sat-full:', syncErr)
+      }
     }
 
     return new Response(
-      JSON.stringify({ success: status === 'valid', status, credential_id }),
+      JSON.stringify({ success: status === 'valid', status, credential_id, jobId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {

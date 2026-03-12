@@ -6,6 +6,7 @@ import type { CxcData, AgingBucket } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Clock, Loader2, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -72,6 +73,8 @@ export default function CxCPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Cuentas por Cobrar</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">Facturas emitidas pendientes de pago — aging por antigüedad</p>
         </div>
+
+        <SyncBanner showWhenEmpty={!data || data.totalPorCobrar === 0} />
 
         {loading ? (
           <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-[#3CBEDB]" /></div>

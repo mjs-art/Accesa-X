@@ -4,10 +4,13 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { advanceToStepAction } from '@/app/actions/onboarding'
 import { getCompanyForVerificationAction, connectSyntageAction } from '@/app/actions/dashboard'
+import { triggerSyncAction, getSyncJobByIdAction } from '@/app/actions/sync'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, ShieldCheck, AlertCircle, CheckCircle2, Lock } from 'lucide-react'
+import { Loader2, ShieldCheck, AlertCircle, Lock } from 'lucide-react'
+import { SyncProgress } from '@/components/inteligencia/SyncProgress'
+import type { SyncJob } from '@/features/inteligencia/types/inteligencia.types'
 
 type Estado = 'idle' | 'loading' | 'success' | 'error'
 
@@ -26,11 +29,13 @@ function VerificacionFiscalPageInner() {
   const searchParams = useSearchParams()
   const fromPerfil = searchParams.get('from') === 'perfil'
 
-  const [company, setCompany] = useState<CompanyData | null>(null)
-  const [ciec, setCiec] = useState('')
-  const [estado, setEstado] = useState<Estado>('idle')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [company, setCompany]               = useState<CompanyData | null>(null)
+  const [ciec, setCiec]                     = useState('')
+  const [estado, setEstado]                 = useState<Estado>('idle')
+  const [errorMsg, setErrorMsg]             = useState<string | null>(null)
   const [loadingCompany, setLoadingCompany] = useState(true)
+  const [syncJob, setSyncJob]               = useState<SyncJob | null>(null)
+  const [syncCompleted, setSyncCompleted]   = useState(false)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -62,6 +67,23 @@ function VerificacionFiscalPageInner() {
     }
 
     setEstado('success')
+
+    // Si syntage-connect ya retornó un jobId, usar ese directamente
+    const jobId = (result as { jobId?: string }).jobId
+    if (jobId) {
+      const jobResult = await getSyncJobByIdAction(jobId)
+      if ('id' in jobResult) {
+        setSyncJob(jobResult)
+        return
+      }
+    }
+
+    // Fallback: disparar sync explícitamente
+    const syncResult = await triggerSyncAction()
+    if ('jobId' in syncResult) {
+      const jobResult = await getSyncJobByIdAction(syncResult.jobId)
+      if ('id' in jobResult) setSyncJob(jobResult)
+    }
   }
 
   async function handleSaltar() {
@@ -75,6 +97,11 @@ function VerificacionFiscalPageInner() {
     setCiec('')
     setErrorMsg(null)
     setEstado('idle')
+  }
+
+  async function handleContinuar() {
+    if (company) await advanceToStepAction(company.id, 'legal-rep')
+    router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
   }
 
   if (loadingCompany) {
@@ -113,10 +140,9 @@ function VerificacionFiscalPageInner() {
           </p>
         </div>
 
-        {/* Estado: idle o loading → mostrar formulario */}
+        {/* Estado: idle o loading */}
         {(estado === 'idle' || estado === 'loading') && (
           <form onSubmit={handleConectar} className="space-y-5">
-            {/* RFC pre-llenado (no editable) */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-[#1A1A1A]">RFC</Label>
               <Input
@@ -126,7 +152,6 @@ function VerificacionFiscalPageInner() {
               />
             </div>
 
-            {/* CIEC */}
             <div className="space-y-1.5">
               <Label htmlFor="ciec" className="text-sm font-medium text-[#1A1A1A]">
                 CIEC — Contraseña SAT
@@ -144,7 +169,6 @@ function VerificacionFiscalPageInner() {
               />
             </div>
 
-            {/* Aviso de seguridad */}
             <div className="flex gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
               <Lock className="h-4 w-4 text-[#6B7280] mt-0.5 shrink-0" />
               <p className="text-xs text-[#6B7280] leading-relaxed">
@@ -156,7 +180,6 @@ function VerificacionFiscalPageInner() {
               </p>
             </div>
 
-            {/* Estado loading */}
             {estado === 'loading' && (
               <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
                 <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0" />
@@ -191,30 +214,36 @@ function VerificacionFiscalPageInner() {
           </form>
         )}
 
-        {/* Estado: success */}
+        {/* Estado: success — verificación ok + progreso de sync */}
         {estado === 'success' && (
           <div className="space-y-5">
-            <div className="flex gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4">
-              <CheckCircle2 className="h-5 w-5 text-[#3CBEDB] mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-800">
-                  Verificación exitosa
-                </p>
-                <p className="text-xs text-emerald-600 mt-1">
-                  Tu situación fiscal fue validada correctamente ante el SAT.
+            {syncJob ? (
+              <SyncProgress
+                initialJob={syncJob}
+                onCompleted={() => setSyncCompleted(true)}
+              />
+            ) : (
+              <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-500 shrink-0" />
+                <p className="text-sm text-emerald-700">
+                  Verificación exitosa — iniciando sincronización de datos...
                 </p>
               </div>
-            </div>
+            )}
 
+            {/* Continuar siempre disponible — la sync corre en background */}
             <Button
-              onClick={async () => {
-                if (company) await advanceToStepAction(company.id, 'legal-rep')
-                router.push(fromPerfil ? '/dashboard/perfil' : '/onboarding/legal-rep')
-              }}
+              onClick={handleContinuar}
               className="w-full h-11 bg-[#3CBEDB] hover:bg-[#3CBEDB]/90 text-white font-medium"
             >
-              Continuar
+              {syncCompleted ? 'Continuar' : 'Continuar al siguiente paso'}
             </Button>
+
+            {!syncCompleted && (
+              <p className="text-xs text-center text-[#6B7280]">
+                Puedes continuar el registro — tus datos fiscales se sincronizan en segundo plano.
+              </p>
+            )}
           </div>
         )}
 

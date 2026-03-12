@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ArrowDownRight, FileText, Loader2, RefreshCw, Truck } from 'lucide-react'
+import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -47,6 +48,8 @@ export default function GastosPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Gastos</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">Facturas recibidas · últimos 12 meses</p>
         </div>
+
+        <SyncBanner showWhenEmpty={!data || data.totalAnual === 0} />
 
         <div className="grid grid-cols-3 gap-4">
           {[

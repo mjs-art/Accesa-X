@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getResumenAction } from '@/app/actions/inteligencia'
 import type { ResumenData } from '@/app/actions/inteligencia'
+import { getSyncStatusAction, triggerSyncAction, getSyncJobByIdAction } from '@/app/actions/sync'
+import type { SyncJob } from '@/features/inteligencia/types/inteligencia.types'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { Loader2, TrendingUp, TrendingDown, Clock, AlertCircle, RefreshCw } from 'lucide-react'
-import { syncCfdisAction as triggerSync } from '@/app/actions/sync-cfdis'
+import { SyncProgress } from '@/components/inteligencia/SyncProgress'
 
 function fmt(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
@@ -22,24 +24,57 @@ function fmtFull(n: number) {
 
 export default function InteligenciaResumenPage() {
   const router = useRouter()
-  const [data, setData] = useState<ResumenData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
+  const [data, setData]         = useState<ResumenData | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [syncJob, setSyncJob]   = useState<SyncJob | null>(null)
+  const [triggering, setTriggering] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { init() }, [])
 
-  async function load() {
+  async function init() {
     setLoading(true)
-    const res = await getResumenAction()
-    if (!('error' in res)) setData(res)
+
+    // Verificar si hay un job de sync activo o reciente
+    const jobRes = await getSyncStatusAction()
+    if ('id' in jobRes) {
+      setSyncJob(jobRes)
+      // Si el job está completado, cargar datos normalmente
+      if (jobRes.status === 'completed') {
+        const res = await getResumenAction()
+        if (!('error' in res)) setData(res)
+      }
+    } else {
+      // Sin job: cargar datos directamente
+      const res = await getResumenAction()
+      if (!('error' in res)) setData(res)
+    }
+
     setLoading(false)
   }
 
-  async function handleSync() {
-    setSyncing(true)
-    await triggerSync()
-    await load()
-    setSyncing(false)
+  async function load() {
+    const res = await getResumenAction()
+    if (!('error' in res)) setData(res)
+  }
+
+  async function handleSync(force = false) {
+    setTriggering(true)
+    const result = await triggerSyncAction(force)
+    if ('error' in result) {
+      if (result.needsVerification) setNeedsVerification(true)
+      setTriggering(false)
+      return
+    }
+    if (result.alreadySynced) {
+      // Sync ya completada — solo recargar datos sin tocar el estado de job
+      await load()
+      setTriggering(false)
+      return
+    }
+    const jobResult = await getSyncJobByIdAction(result.jobId)
+    if ('id' in jobResult) setSyncJob(jobResult)
+    setTriggering(false)
   }
 
   const kpis = [
@@ -49,15 +84,23 @@ export default function InteligenciaResumenPage() {
     { label: 'Por pagar', value: data ? fmtFull(data.totalPorPagar) : '—', icon: <AlertCircle className="h-4 w-4 text-amber-500" />, color: data?.totalPorPagar ? 'text-amber-600' : 'text-[#1A1A1A]', href: '/dashboard/inteligencia/cxp' },
   ]
 
+  const isSyncing = syncJob?.status === 'queued' || syncJob?.status === 'running'
+
   return (
     <div>
       <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-[#1A1A1A]">Inteligencia — Resumen</span>
-        <button onClick={handleSync} disabled={syncing}
-          className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] transition-colors disabled:opacity-50">
-          <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Sincronizando...' : 'Sincronizar SAT'}
-        </button>
+        {!isSyncing && data?.synced && (
+          <button
+            onClick={() => handleSync(true)}
+            disabled={triggering}
+            className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] transition-colors disabled:opacity-50"
+            title="Re-sincronizar datos del SAT"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${triggering ? 'animate-spin' : ''}`} />
+            {triggering ? 'Sincronizando...' : 'Re-sincronizar SAT'}
+          </button>
+        )}
       </header>
 
       <div className="px-8 py-8 space-y-6">
@@ -70,17 +113,50 @@ export default function InteligenciaResumenPage() {
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-6 w-6 animate-spin text-[#3CBEDB]" />
           </div>
+        ) : isSyncing && syncJob ? (
+          // Sync en progreso — mostrar progress en lugar de KPIs vacíos
+          <div className="max-w-md">
+            <SyncProgress
+              initialJob={syncJob}
+              onCompleted={() => {
+                setSyncJob((prev) => prev ? { ...prev, status: 'completed', phase: 'completed', progressPct: 100 } : prev)
+                load()
+              }}
+            />
+          </div>
         ) : !data?.synced ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <RefreshCw className="h-10 w-10 text-slate-300 mb-4" />
             <p className="text-sm font-medium text-[#1A1A1A]">Sin datos sincronizados</p>
-            <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
-              Conecta Syntage y presiona "Sincronizar SAT" para ver tu información financiera.
-            </p>
-            <button onClick={handleSync} disabled={syncing}
-              className="mt-4 px-4 py-2 text-sm font-medium text-white bg-[#3CBEDB] rounded-lg hover:bg-[#3CBEDB]/90 disabled:opacity-50">
-              {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
-            </button>
+            {needsVerification ? (
+              <>
+                <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
+                  Primero conecta tu empresa con el SAT para poder sincronizar tus datos fiscales.
+                </p>
+                <button
+                  onClick={() => router.push('/onboarding/verificacion-fiscal')}
+                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-[#3CBEDB] rounded-lg hover:bg-[#3CBEDB]/90"
+                >
+                  Ir a Verificación Fiscal
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
+                  Sincroniza tus datos del SAT para ver tu información financiera.
+                </p>
+                {syncJob?.status === 'failed' && (
+                  <p className="text-xs text-red-600 mt-2 max-w-xs">{syncJob.errorMessage}</p>
+                )}
+                <button
+                  onClick={() => handleSync(false)}
+                  disabled={triggering}
+                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-[#3CBEDB] rounded-lg hover:bg-[#3CBEDB]/90 disabled:opacity-50"
+                >
+                  {triggering ? 'Iniciando...' : 'Sincronizar ahora'}
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
