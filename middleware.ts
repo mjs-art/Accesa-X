@@ -129,7 +129,7 @@ export async function middleware(request: NextRequest) {
   if (user && pathname.startsWith('/dashboard')) {
     const { data: company } = await supabase
       .from('companies')
-      .select('onboarding_completed, onboarding_step')
+      .select('onboarding_completed, onboarding_step, syntage_validated_at')
       .eq('user_id', user.id)
       .limit(1)
       .single()
@@ -138,11 +138,15 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/onboarding/empresa', request.url))
     }
 
-    if (!company.onboarding_completed) {
-      const step = (company.onboarding_step as OnboardingStep) ?? 'empresa'
-      const path = STEP_PATHS[step] ?? '/onboarding/empresa'
-      return NextResponse.redirect(new URL(path, request.url))
+    // Usuarios con SAT validado se consideran con onboarding completo
+    // (cubre registros previos a que se agregaran nuevos pasos)
+    if (company.onboarding_completed || company.syntage_validated_at) {
+      return supabaseResponse
     }
+
+    const step = (company.onboarding_step as OnboardingStep) ?? 'empresa'
+    const path = STEP_PATHS[step] ?? '/onboarding/empresa'
+    return NextResponse.redirect(new URL(path, request.url))
   }
 
   return supabaseResponse

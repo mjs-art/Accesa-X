@@ -42,13 +42,23 @@ export async function GET(request: Request) {
       // Detectar en qué paso del onboarding está el usuario
       const { data: company } = await supabase
         .from('companies')
-        .select('id, onboarding_completed, onboarding_step')
+        .select('id, onboarding_completed, onboarding_step, syntage_validated_at')
         .eq('user_id', data.user.id)
         .limit(1)
         .single()
 
       if (!company) {
         return NextResponse.redirect(`${origin}/onboarding/empresa`)
+      }
+
+      // Si tiene SAT validado pero onboarding_completed = false, auto-sanar el registro.
+      // Esto cubre usuarios registrados antes de que se agregaran nuevos pasos de onboarding.
+      if (!company.onboarding_completed && company.syntage_validated_at) {
+        await supabase
+          .from('companies')
+          .update({ onboarding_completed: true, onboarding_step: 'completed' })
+          .eq('id', company.id)
+        return NextResponse.redirect(`${origin}/dashboard`)
       }
 
       if (company.onboarding_completed) {
