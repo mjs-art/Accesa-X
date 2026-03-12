@@ -8,6 +8,7 @@ import type {
   ApplicationCompanyDetail,
   ApplicationContract,
   AnalysisResult,
+  OrdenCompraAnalysis,
   InternalNote,
   AddNoteInput,
   AdminCompanyWithApps,
@@ -57,7 +58,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
       .select(`
         id, tipo_credito, monto_solicitado, plazo_meses, destino, status, created_at,
         resolved_at, client_rfc, client_name, project_name,
-        notificacion_deudor, porcentaje_anticipo, analyst_notes,
+        notificacion_deudor, porcentaje_anticipo, analyst_notes, orden_compra_analysis,
         companies ( id, nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat ),
         contracts:contract_id ( storage_path, monto_contrato, analysis_result )
       `)
@@ -189,6 +190,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
       analystNotes: row.analyst_notes as string | null,
       company,
       contract,
+      ordenCompraAnalysis: (row.orden_compra_analysis as OrdenCompraAnalysis | null) ?? null,
     }
   }
 }

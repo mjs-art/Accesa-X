@@ -391,3 +391,307 @@ export async function getFinanciamientoSignedUrlAction(storagePath: string): Pro
   if (error) return { error: error.message }
   return { url: data.signedUrl }
 }
+
+// ── URL firmada para cualquier bucket (solo admin) ─────────────────────────────
+
+export async function getAdminStorageUrlAction(
+  bucket: string,
+  storagePath: string,
+): Promise<{ url: string } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, 3600)
+  if (error) return { error: error.message }
+  return { url: data.signedUrl }
+}
+
+// ── Detalle completo de empresa (expediente) ───────────────────────────────────
+
+export interface AdminEmpresaDetail {
+  id: string
+  nombreRazonSocial: string
+  rfc: string
+  industria: string | null
+  tamanoEmpresa: string | null
+  estatusSat: string | null
+  onboardingStep: string | null
+  onboardingCompleted: boolean
+  createdAt: string
+  legalRep: {
+    id: string
+    nombres: string | null
+    apellidoPaterno: string | null
+    apellidoMaterno: string | null
+    curp: string | null
+    rfcPersonal: string | null
+    email: string | null
+    telefono: string | null
+  } | null
+  legalRepDocs: Array<{ id: string; documentType: string; storagePath: string | null; status: string }>
+  shareholders: Array<{
+    id: string
+    nombres: string | null
+    apellidoPaterno: string | null
+    apellidoMaterno: string | null
+    porcentajeParticipacion: number | null
+    curp: string | null
+    esPersonaMoral: boolean
+  }>
+  companyDocs: Array<{ id: string; documentType: string; storagePath: string | null; status: string }>
+  creditApplications: Array<{ id: string; tipoCredito: string; montoSolicitado: number; status: string; createdAt: string }>
+}
+
+export async function getCompanyDetailAdminAction(
+  companyId: string,
+): Promise<{ company: AdminEmpresaDetail } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const [companyRes, lrRes, lrdRes, shRes, cdRes, appsRes] = await Promise.all([
+    supabase.from('companies')
+      .select('id, nombre_razon_social, rfc, industria, tamano_empresa, estatus_sat, onboarding_step, onboarding_completed, created_at')
+      .eq('id', companyId).single(),
+    supabase.from('legal_representatives')
+      .select('id, nombres, apellido_paterno, apellido_materno, curp, rfc_personal, email, telefono')
+      .eq('company_id', companyId).limit(1).single(),
+    supabase.from('legal_rep_documents')
+      .select('id, document_type, storage_path, status')
+      .eq('company_id', companyId),
+    supabase.from('shareholders')
+      .select('id, nombres, apellido_paterno, apellido_materno, porcentaje_participacion, curp, es_persona_moral')
+      .eq('company_id', companyId),
+    supabase.from('company_documents')
+      .select('id, document_type, storage_path, status')
+      .eq('company_id', companyId),
+    supabase.from('credit_applications')
+      .select('id, tipo_credito, monto_solicitado, status, created_at')
+      .eq('company_id', companyId).order('created_at', { ascending: false }),
+  ])
+
+  if (!companyRes.data) return { error: 'Empresa no encontrada' }
+  const c = companyRes.data
+  const lr = lrRes.data
+
+  return {
+    company: {
+      id: c.id,
+      nombreRazonSocial: c.nombre_razon_social,
+      rfc: c.rfc,
+      industria: c.industria,
+      tamanoEmpresa: c.tamano_empresa,
+      estatusSat: c.estatus_sat,
+      onboardingStep: c.onboarding_step,
+      onboardingCompleted: c.onboarding_completed,
+      createdAt: c.created_at,
+      legalRep: lr ? {
+        id: lr.id,
+        nombres: lr.nombres,
+        apellidoPaterno: lr.apellido_paterno,
+        apellidoMaterno: lr.apellido_materno,
+        curp: lr.curp,
+        rfcPersonal: lr.rfc_personal,
+        email: lr.email,
+        telefono: lr.telefono,
+      } : null,
+      legalRepDocs: (lrdRes.data ?? []).map(d => ({
+        id: d.id, documentType: d.document_type, storagePath: d.storage_path, status: d.status,
+      })),
+      shareholders: (shRes.data ?? []).map(s => ({
+        id: s.id, nombres: s.nombres, apellidoPaterno: s.apellido_paterno,
+        apellidoMaterno: s.apellido_materno, porcentajeParticipacion: s.porcentaje_participacion,
+        curp: s.curp, esPersonaMoral: s.es_persona_moral,
+      })),
+      companyDocs: (cdRes.data ?? []).map(d => ({
+        id: d.id, documentType: d.document_type, storagePath: d.storage_path, status: d.status,
+      })),
+      creditApplications: (appsRes.data ?? []).map(a => ({
+        id: a.id, tipoCredito: a.tipo_credito, montoSolicitado: a.monto_solicitado,
+        status: a.status, createdAt: a.created_at,
+      })),
+    },
+  }
+}
+
+// ── Cartera activa ─────────────────────────────────────────────────────────────
+
+export interface CarteraItem {
+  id: string
+  empresa: string
+  rfc: string
+  companyId: string
+  tipoCredito: string
+  montoSolicitado: number
+  montoDisperso: number | null
+  referenciaDesembolso: string | null
+  status: string
+  fechaDesembolso: string | null
+  fechaLiquidacionEst: string | null
+  fechaLiquidacionReal: string | null
+  createdAt: string
+}
+
+export async function getCarteraAction(): Promise<{ cartera: CarteraItem[] } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { data, error } = await supabase
+    .from('credit_applications')
+    .select(`
+      id, tipo_credito, monto_solicitado, monto_dispersado, referencia_desembolso,
+      status, fecha_desembolso, fecha_liquidacion_est, fecha_liquidacion_real, created_at,
+      companies(id, nombre_razon_social, rfc)
+    `)
+    .in('status', ['aprobado', 'fondos_liberados', 'en_ejecucion', 'liquidado'])
+    .order('created_at', { ascending: false })
+
+  if (error) return { error: error.message }
+
+  return {
+    cartera: (data ?? []).map(row => {
+      const co = row.companies as Record<string, unknown> | null
+      return {
+        id: row.id,
+        empresa: (co?.nombre_razon_social as string) ?? '—',
+        rfc: (co?.rfc as string) ?? '—',
+        companyId: (co?.id as string) ?? '',
+        tipoCredito: row.tipo_credito,
+        montoSolicitado: row.monto_solicitado ?? 0,
+        montoDisperso: row.monto_dispersado ?? null,
+        referenciaDesembolso: row.referencia_desembolso ?? null,
+        status: row.status,
+        fechaDesembolso: row.fecha_desembolso ?? null,
+        fechaLiquidacionEst: row.fecha_liquidacion_est ?? null,
+        fechaLiquidacionReal: row.fecha_liquidacion_real ?? null,
+        createdAt: row.created_at,
+      }
+    }),
+  }
+}
+
+// ── Liberar fondos con tracking ────────────────────────────────────────────────
+
+export async function liberarFondosAction(
+  applicationId: string,
+  referencia: string,
+  montoDisperso: number,
+  fechaLiquidacionEst: string,
+): Promise<{ ok: boolean } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { error } = await supabase
+    .from('credit_applications')
+    .update({
+      status: 'fondos_liberados',
+      referencia_desembolso: referencia,
+      monto_dispersado: montoDisperso,
+      fecha_desembolso: new Date().toISOString(),
+      fecha_liquidacion_est: new Date(fechaLiquidacionEst + 'T00:00:00').toISOString(),
+    })
+    .eq('id', applicationId)
+
+  if (error) return { error: error.message }
+
+  const fmt = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+  const service = buildService(supabase)
+  await service.addNote(
+    applicationId, user.id, user.email ?? 'admin',
+    `[SISTEMA] Fondos liberados. Referencia: ${referencia}. Monto dispersado: ${fmt(montoDisperso)}. Liquidación estimada: ${fechaLiquidacionEst}`,
+  )
+
+  void sendStatusEmail(supabase, applicationId, 'fondos_liberados', 'Fondos liberados al cliente')
+
+  return { ok: true }
+}
+
+// ── Métricas para reportes ─────────────────────────────────────────────────────
+
+export interface ReportesData {
+  totalSolicitudes: number
+  totalAprobadas: number
+  totalRechazadas: number
+  tasaAprobacion: number
+  carteraActiva: number
+  montoTotalAprobado: number
+  porStatus: Record<string, number>
+  porMes: Array<{ mes: string; solicitudes: number; aprobadas: number }>
+  topEmpresas: Array<{ nombre: string; monto: number; status: string }>
+}
+
+export async function getReportesAction(): Promise<{ data: ReportesData } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const { data, error } = await supabase
+    .from('credit_applications')
+    .select('status, monto_solicitado, created_at, companies(nombre_razon_social)')
+    .neq('status', 'borrador')
+    .order('created_at', { ascending: false })
+
+  if (error) return { error: error.message }
+
+  const rows = data ?? []
+
+  const porStatus: Record<string, number> = {}
+  for (const r of rows) porStatus[r.status] = (porStatus[r.status] ?? 0) + 1
+
+  const aprobadosStatuses = ['aprobado', 'fondos_liberados', 'en_ejecucion', 'liquidado']
+  const totalSolicitudes = rows.length
+  const totalAprobadas = rows.filter(r => aprobadosStatuses.includes(r.status)).length
+  const totalRechazadas = porStatus['rechazado'] ?? 0
+  const tasaAprobacion = totalSolicitudes > 0 ? Math.round((totalAprobadas / totalSolicitudes) * 100) : 0
+  const carteraActiva = rows
+    .filter(r => ['fondos_liberados', 'en_ejecucion'].includes(r.status))
+    .reduce((s, r) => s + (r.monto_solicitado ?? 0), 0)
+  const montoTotalAprobado = rows
+    .filter(r => aprobadosStatuses.includes(r.status))
+    .reduce((s, r) => s + (r.monto_solicitado ?? 0), 0)
+
+  // Por mes (últimos 6 meses)
+  const now = new Date()
+  const porMes = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })
+    const inMonth = rows.filter(r => r.created_at?.startsWith(key))
+    return {
+      mes: label,
+      solicitudes: inMonth.length,
+      aprobadas: inMonth.filter(r => aprobadosStatuses.includes(r.status)).length,
+    }
+  })
+
+  // Top 5 empresas por monto
+  const byEmpresa: Record<string, { nombre: string; monto: number; status: string }> = {}
+  for (const r of rows) {
+    const co = r.companies as Record<string, unknown> | null
+    const nombre = (co?.nombre_razon_social as string) ?? 'Sin nombre'
+    if (!byEmpresa[nombre] || (r.monto_solicitado ?? 0) > byEmpresa[nombre].monto) {
+      byEmpresa[nombre] = { nombre, monto: r.monto_solicitado ?? 0, status: r.status }
+    }
+  }
+  const topEmpresas = Object.values(byEmpresa).sort((a, b) => b.monto - a.monto).slice(0, 5)
+
+  return { data: { totalSolicitudes, totalAprobadas, totalRechazadas, tasaAprobacion, carteraActiva, montoTotalAprobado, porStatus, porMes, topEmpresas } }
+}

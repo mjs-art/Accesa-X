@@ -1,6 +1,12 @@
 [functions.syntage-connect]
 verify_jwt = false
 
+[functions.analyze-orden-compra]
+verify_jwt = false
+
+[functions.sync-cfdis]
+verify_jwt = false
+
 [functions.get-dashboard-data]
 verify_jwt = false
 

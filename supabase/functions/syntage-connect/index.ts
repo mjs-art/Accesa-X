@@ -126,6 +126,7 @@ serve(async (req) => {
         credential_id: entity_id,
         syntage_validated_at: status === 'valid' ? new Date().toISOString() : null,
         syntage_raw_response: rawResponse,
+        estatus_sat: status === 'valid' ? 'Activo' : null,
       })
       .eq('id', company_id)
 

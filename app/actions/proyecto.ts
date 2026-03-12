@@ -28,6 +28,20 @@ async function getCompanyContext() {
 
 // ── Tipos exportados ───────────────────────────────────────────────────────────
 
+export interface OrdenCompraAnalysis {
+  resumen: string
+  monto_total: number
+  moneda: string
+  cliente_nombre: string
+  cliente_rfc: string | null
+  fecha_documento: string | null
+  fecha_entrega: string | null
+  descripcion_servicio: string
+  viabilidad_score: number
+  viabilidad_razon: string
+  riesgos: { descripcion: string; nivel: 'alto' | 'medio' | 'bajo' }[]
+}
+
 export type ProyectoStatus =
   | 'borrador' | 'submitted' | 'en_revision' | 'docs_pendientes'
   | 'aprobado' | 'fondos_liberados' | 'en_ejecucion' | 'liquidado' | 'rechazado'
@@ -394,4 +408,23 @@ export async function verificarProveedorAction(
 
   if (error) return { error: error.message }
   return { ok: true }
+}
+
+// ── Analizar orden de compra con Claude ────────────────────────────────────────
+
+export async function analyzeOrdenCompraAction(
+  applicationId: string,
+  storagePath: string
+): Promise<{ analysis: OrdenCompraAnalysis } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data, error } = await supabase.functions.invoke('analyze-orden-compra', {
+    body: { application_id: applicationId, storage_path: storagePath },
+  })
+
+  if (error) return { error: error.message ?? 'Error al analizar documento' }
+  if (!data?.success) return { error: data?.error ?? 'Sin respuesta del análisis' }
+  return { analysis: data.analysis as OrdenCompraAnalysis }
 }

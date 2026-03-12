@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createProyectoAction, uploadDocumentoAction, submitProyectoAction } from '@/app/actions/proyecto'
+import { createProyectoAction, uploadDocumentoAction, submitProyectoAction, analyzeOrdenCompraAction } from '@/app/actions/proyecto'
 import { getAnalisisAction } from '@/app/actions/inteligencia'
-import type { CreateProyectoInput } from '@/app/actions/proyecto'
-import { CheckCircle2, ChevronRight, Loader2, Upload, X, AlertTriangle, Check } from 'lucide-react'
+import type { CreateProyectoInput, OrdenCompraAnalysis } from '@/app/actions/proyecto'
+import { CheckCircle2, ChevronRight, Loader2, Upload, X, AlertTriangle, Check, TrendingUp, Sparkles } from 'lucide-react'
 
 function formatMXN(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
@@ -104,6 +104,8 @@ export default function NuevoProyectoPage() {
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [uploadedDocs, setUploadedDocs] = useState<Set<string>>(new Set())
   const [analisis, setAnalisis] = useState<{ dso: number; dpo: number; capitalTrabajo: number } | null>(null)
+  const [ordenAnalysis, setOrdenAnalysis] = useState<OrdenCompraAnalysis | null>(null)
+  const [analyzingOrden, setAnalyzingOrden] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [autoAprobado, setAutoAprobado] = useState(false)
@@ -195,6 +197,14 @@ export default function NuevoProyectoPage() {
     if (!('error' in res)) {
       setUploadedDocs(prev => new Set(Array.from(prev).concat(tipo)))
       setDocs(d => ({ ...d, [tipo]: file }))
+
+      // Analizar la orden de compra automáticamente con Claude
+      if (tipo === 'orden_compra') {
+        setAnalyzingOrden(true)
+        analyzeOrdenCompraAction(applicationId, res.path)
+          .then(r => { if (!('error' in r)) setOrdenAnalysis(r.analysis) })
+          .finally(() => setAnalyzingOrden(false))
+      }
     }
   }
 
@@ -421,6 +431,16 @@ export default function NuevoProyectoPage() {
                 )
               })}
               <p className="text-xs text-[#6B7280]">* Obligatorios para enviar la solicitud. Máx. 20 MB por archivo (PDF, JPG, PNG).</p>
+
+              {/* Indicador de análisis */}
+              {(analyzingOrden || ordenAnalysis) && (
+                <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm ${analyzingOrden ? 'bg-blue-50 border border-blue-100 text-blue-700' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}>
+                  {analyzingOrden
+                    ? <><Loader2 className="h-4 w-4 animate-spin shrink-0" /> Claude está analizando tu orden de compra…</>
+                    : <><Sparkles className="h-4 w-4 shrink-0" /> Análisis completado — revisa el resumen en el paso siguiente</>
+                  }
+                </div>
+              )}
             </div>
           )}
 
@@ -451,6 +471,84 @@ export default function NuevoProyectoPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Análisis de la orden de compra */}
+              {ordenAnalysis && (
+                <div className="bg-white border border-[#3CBEDB]/30 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-[#3CBEDB]/5 border-b border-[#3CBEDB]/20">
+                    <Sparkles className="h-4 w-4 text-[#3CBEDB]" />
+                    <p className="text-xs font-semibold text-[#1A1A1A]">Análisis de tu orden de compra</p>
+                    <span className="ml-auto text-[10px] text-[#6B7280]">Generado por Claude AI</span>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    {/* Resumen */}
+                    <p className="text-xs text-[#6B7280] leading-relaxed">{ordenAnalysis.resumen}</p>
+
+                    {/* Métricas clave */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <p className="text-[10px] text-[#6B7280]">Monto detectado</p>
+                        <p className={`text-sm font-bold mt-0.5 ${ordenAnalysis.monto_total > 0 && Math.abs(ordenAnalysis.monto_total - montoTotal) / montoTotal > 0.1 ? 'text-amber-600' : 'text-[#1A1A1A]'}`}>
+                          {ordenAnalysis.monto_total > 0 ? formatMXN(ordenAnalysis.monto_total) : '—'}
+                        </p>
+                        {ordenAnalysis.monto_total > 0 && Math.abs(ordenAnalysis.monto_total - montoTotal) / montoTotal > 0.1 && (
+                          <p className="text-[10px] text-amber-600 mt-0.5">Difiere del monto ingresado</p>
+                        )}
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <p className="text-[10px] text-[#6B7280]">Cliente detectado</p>
+                        <p className="text-sm font-bold text-[#1A1A1A] mt-0.5 truncate">{ordenAnalysis.cliente_nombre || '—'}</p>
+                        {ordenAnalysis.cliente_rfc && (
+                          <p className="text-[10px] text-[#6B7280] font-mono mt-0.5">{ordenAnalysis.cliente_rfc}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Viabilidad */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5 text-[#1A1A1A]" />
+                          <p className="text-xs font-semibold text-[#1A1A1A]">Score de viabilidad</p>
+                        </div>
+                        <span className="text-lg font-bold text-[#1A1A1A]">{ordenAnalysis.viabilidad_score}<span className="text-xs text-[#6B7280] font-normal">/100</span></span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${ordenAnalysis.viabilidad_score >= 70 ? 'bg-[#3CBEDB]' : ordenAnalysis.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'}`}
+                          style={{ width: `${ordenAnalysis.viabilidad_score}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">{ordenAnalysis.viabilidad_razon}</p>
+                    </div>
+
+                    {/* Riesgos */}
+                    {ordenAnalysis.riesgos?.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wide mb-2">Riesgos identificados</p>
+                        <div className="space-y-1.5">
+                          {ordenAnalysis.riesgos.map((r, i) => (
+                            <div key={i} className="flex items-start gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                              <AlertTriangle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${r.nivel === 'alto' ? 'text-red-500' : r.nivel === 'medio' ? 'text-amber-500' : 'text-emerald-500'}`} />
+                              <p className="text-xs text-[#1A1A1A] flex-1">{r.descripcion}</p>
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${r.nivel === 'alto' ? 'bg-red-50 text-red-700 border-red-200' : r.nivel === 'medio' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                {r.nivel}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {analyzingOrden && !ordenAnalysis && (
+                <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-700">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  Claude está analizando la orden de compra…
+                </div>
+              )}
 
               {analisis && (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">

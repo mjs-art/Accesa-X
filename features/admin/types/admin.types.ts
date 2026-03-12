@@ -40,6 +40,20 @@ export interface AnalysisResult {
   viabilidad_razon: string
 }
 
+export interface OrdenCompraAnalysis {
+  resumen: string
+  monto_total: number
+  moneda: string
+  cliente_nombre: string
+  cliente_rfc: string | null
+  fecha_documento: string | null
+  fecha_entrega: string | null
+  descripcion_servicio: string
+  viabilidad_score: number
+  viabilidad_razon: string
+  riesgos: { descripcion: string; nivel: 'alto' | 'medio' | 'bajo' }[]
+}
+
 export interface ApplicationContract {
   storagePath: string
   montoContrato: number | null
@@ -72,6 +86,7 @@ export interface ApplicationDetail {
   analystNotes: string | null
   company: ApplicationCompanyDetail | null
   contract: ApplicationContract | null
+  ordenCompraAnalysis: OrdenCompraAnalysis | null
 }
 
 export interface InternalNote {

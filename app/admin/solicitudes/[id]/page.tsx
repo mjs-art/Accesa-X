@@ -14,6 +14,7 @@ import {
   verificarProveedorAdminAction,
   getFinanciamientoSignedUrlAction,
   getFactorajeCfdisAdminAction,
+  liberarFondosAction,
 } from '@/app/actions/admin'
 import type { ApplicationDetail, InternalNote } from '@/features/admin/types/admin.types'
 import type { AdminFinancialAnalisis, AdminFactorajeCfdi } from '@/app/actions/admin'
@@ -26,7 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import {
   AlertTriangle, ArrowLeft, CheckCircle2, Clock,
-  DollarSign, Download, FileText, Loader2, TrendingUp,
+  DollarSign, Download, FileText, Loader2, TrendingUp, Sparkles,
 } from 'lucide-react'
 
 // ── Config visual ──────────────────────────────────────────────────────────────
@@ -93,6 +94,11 @@ export default function AdminSolicitudPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [approveOpen, setApproveOpen] = useState(false)
 
+  const [dispersarOpen, setDispersarOpen] = useState(false)
+  const [dispersarReferencia, setDispersarReferencia] = useState('')
+  const [dispersarMonto, setDispersarMonto] = useState('')
+  const [dispersarFechaLiq, setDispersarFechaLiq] = useState('')
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { init() }, [id])
 
@@ -154,8 +160,26 @@ export default function AdminSolicitudPage() {
   }
 
   async function handleLiberarFondos() {
-    const ok = await changeStatus('fondos_liberados', 'Fondos liberados al cliente')
-    if (ok) toast({ title: 'Fondos marcados como liberados' })
+    if (!dispersarReferencia.trim() || !dispersarMonto || !dispersarFechaLiq) return
+    setUpdatingStatus(true)
+    const result = await liberarFondosAction(
+      id,
+      dispersarReferencia.trim(),
+      parseFloat(dispersarMonto),
+      dispersarFechaLiq,
+    )
+    setUpdatingStatus(false)
+    if ('error' in result) {
+      toast({ title: 'Error al liberar fondos', description: result.error, variant: 'destructive' })
+      return
+    }
+    setApp(prev => prev ? { ...prev, status: 'fondos_liberados' } : prev)
+    await refreshNotes()
+    setDispersarOpen(false)
+    setDispersarReferencia('')
+    setDispersarMonto('')
+    setDispersarFechaLiq('')
+    toast({ title: 'Fondos liberados correctamente' })
   }
 
   async function handleEnEjecucion() {
@@ -235,6 +259,10 @@ export default function AdminSolicitudPage() {
   const r = app.contract?.analysisResult
   const viabilidadColor = r
     ? r.viabilidad_score >= 70 ? 'bg-[#3CBEDB]' : r.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
+    : ''
+  const oc = app.ordenCompraAnalysis
+  const ocViabilidadColor = oc
+    ? oc.viabilidad_score >= 70 ? 'bg-[#3CBEDB]' : oc.viabilidad_score >= 40 ? 'bg-amber-400' : 'bg-red-500'
     : ''
 
   return (
@@ -482,6 +510,81 @@ export default function AdminSolicitudPage() {
         </Card>
       )}
 
+      {/* ── Sección 5b: Análisis de orden de compra ────────────────────────── */}
+      {oc && app.tipoCredito === 'proyecto' && (
+        <Card className="border-[#3CBEDB]/30 shadow-sm">
+          <CardHeader className="bg-[#3CBEDB]/5 border-b border-[#3CBEDB]/20">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[#3CBEDB]" />
+              <CardTitle className="text-sm font-semibold text-[#1A1A1A]">Análisis de orden de compra</CardTitle>
+              <span className="ml-auto text-xs text-[#6B7280]">Claude AI</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-4">
+            <section>
+              <h4 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Resumen</h4>
+              <p className="text-sm text-[#1A1A1A] bg-slate-50 rounded-lg p-3 leading-relaxed">{oc.resumen}</p>
+            </section>
+
+            <section className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
+                <DollarSign className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-[#6B7280]">Monto detectado</p>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">{oc.monto_total ? formatMXN(oc.monto_total, oc.moneda) : '—'}</p>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 flex gap-2.5">
+                <FileText className="h-4 w-4 text-[#3CBEDB] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-[#6B7280]">Cliente pagador</p>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">{oc.cliente_nombre || '—'}</p>
+                  {oc.cliente_rfc && <p className="text-xs text-[#6B7280] font-mono mt-0.5">{oc.cliente_rfc}</p>}
+                </div>
+              </div>
+            </section>
+
+            {oc.descripcion_servicio && (
+              <section>
+                <h4 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Servicio / Producto</h4>
+                <p className="text-sm text-[#1A1A1A] bg-slate-50 rounded-lg p-3">{oc.descripcion_servicio}</p>
+              </section>
+            )}
+
+            {oc.riesgos?.length > 0 && (
+              <section>
+                <h4 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Riesgos</h4>
+                <ul className="space-y-2">
+                  {oc.riesgos.map((riesgo, i) => (
+                    <li key={i} className="flex items-start gap-2.5 bg-slate-50 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="flex-1 text-sm text-[#1A1A1A]">{riesgo.descripcion}</p>
+                      <RiesgoBadge nivel={riesgo.nivel} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-[#1A1A1A]" />
+                  <h4 className="text-sm font-semibold text-[#1A1A1A]">Score de viabilidad</h4>
+                </div>
+                <span className="text-2xl font-bold text-[#1A1A1A]">
+                  {oc.viabilidad_score}<span className="text-sm text-[#6B7280] font-normal">/100</span>
+                </span>
+              </div>
+              <div className="h-3 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <div className={`h-full rounded-full ${ocViabilidadColor}`} style={{ width: `${oc.viabilidad_score}%` }} />
+              </div>
+              <p className="text-xs text-[#6B7280] leading-relaxed">{oc.viabilidad_razon}</p>
+            </section>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Sección 6: Contrato de respaldo ───────────────────────────────── */}
       {app.contract && (
         <Card className="border-slate-200 shadow-sm">
@@ -659,7 +762,7 @@ export default function AdminSolicitudPage() {
           </Button>
 
           <Button
-            onClick={handleLiberarFondos}
+            onClick={() => setDispersarOpen(true)}
             disabled={updatingStatus || app.status !== 'aprobado'}
             variant="outline"
             className="border-teal-200 text-teal-700 hover:bg-teal-50 disabled:opacity-40"
@@ -726,6 +829,62 @@ export default function AdminSolicitudPage() {
             <Button variant="outline" size="sm" onClick={() => setApproveOpen(false)}>Cancelar</Button>
             <Button size="sm" onClick={handleApprove} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Sí, aprobar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Liberar fondos ──────────────────────────────────────────── */}
+      <Dialog open={dispersarOpen} onOpenChange={setDispersarOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[#1A1A1A]">Liberar fondos</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[#6B7280]">
+            Registra los datos de la dispersión para{' '}
+            <strong>{app.company?.nombreRazonSocial}</strong>.
+          </p>
+          <div className="space-y-3 mt-1">
+            <div>
+              <label className="text-xs text-[#6B7280] mb-1 block">Referencia bancaria / SPEI</label>
+              <input
+                type="text"
+                value={dispersarReferencia}
+                onChange={e => setDispersarReferencia(e.target.value)}
+                placeholder="Ej. SPEI-20240315-001"
+                className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[#6B7280] mb-1 block">Monto dispersado (MXN)</label>
+              <input
+                type="number"
+                value={dispersarMonto}
+                onChange={e => setDispersarMonto(e.target.value)}
+                placeholder={String(app.montoSolicitado)}
+                className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[#6B7280] mb-1 block">Fecha de liquidación estimada</label>
+              <input
+                type="date"
+                value={dispersarFechaLiq}
+                onChange={e => setDispersarFechaLiq(e.target.value)}
+                className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3CBEDB]/20 focus:border-[#3CBEDB]"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" size="sm" onClick={() => setDispersarOpen(false)}>Cancelar</Button>
+            <Button
+              size="sm"
+              onClick={handleLiberarFondos}
+              disabled={!dispersarReferencia.trim() || !dispersarMonto || !dispersarFechaLiq || updatingStatus}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              {updatingStatus ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Confirmar dispersión
             </Button>
           </div>
         </DialogContent>

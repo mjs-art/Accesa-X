@@ -1,11 +1,13 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { ClipboardList, Building2 } from 'lucide-react'
+import { ClipboardList, Building2, Briefcase, BarChart2 } from 'lucide-react'
 
 const NAV = [
   { href: '/admin', label: 'Solicitudes', icon: ClipboardList, exact: true },
   { href: '/admin/empresas', label: 'Empresas', icon: Building2, exact: false },
+  { href: '/admin/cartera', label: 'Cartera', icon: Briefcase, exact: false },
+  { href: '/admin/reportes', label: 'Reportes', icon: BarChart2, exact: false },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { CheckCircle2, Loader2, Search, XCircle } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Loader2, Search, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 // ── Config visual ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
@@ -35,6 +36,7 @@ function formatDate(d: string) {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function AdminEmpresasPage() {
+  const router = useRouter()
   const [companies, setCompanies] = useState<AdminCompanyWithApps[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -94,6 +96,7 @@ export default function AdminEmpresasPage() {
                 <TableHead className="text-xs font-semibold text-[#6B7280]">SAT</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Productos</TableHead>
                 <TableHead className="text-xs font-semibold text-[#6B7280]">Registro</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,7 +105,11 @@ export default function AdminEmpresasPage() {
                 const totalMonto = apps.reduce((sum, a) => sum + (a.montoSolicitado ?? 0), 0)
 
                 return (
-                  <TableRow key={company.id} className="hover:bg-slate-50/60 align-top">
+                  <TableRow
+                    key={company.id}
+                    className="hover:bg-slate-50/60 align-top cursor-pointer"
+                    onClick={() => router.push(`/admin/empresas/${company.id}`)}
+                  >
                     <TableCell className="pl-6 py-4">
                       <p className="text-sm font-semibold text-[#1A1A1A]">{company.nombreRazonSocial}</p>
                       <p className="text-xs text-[#6B7280] font-mono mt-0.5">{company.rfc}</p>
@@ -161,6 +168,9 @@ export default function AdminEmpresasPage() {
 
                     <TableCell className="text-sm text-[#6B7280] py-4">
                       {formatDate(company.createdAt)}
+                    </TableCell>
+                    <TableCell className="py-4 pr-4">
+                      <ChevronRight className="h-4 w-4 text-slate-300" />
                     </TableCell>
                   </TableRow>
                 )
