@@ -561,7 +561,7 @@ export async function getCarteraAction(): Promise<{ cartera: CarteraItem[] } | {
 
   return {
     cartera: (data ?? []).map(row => {
-      const co = row.companies as Record<string, unknown> | null
+      const co = row.companies as unknown as Record<string, unknown> | null
       return {
         id: row.id,
         empresa: (co?.nombre_razon_social as string) ?? '—',
@@ -685,7 +685,7 @@ export async function getReportesAction(): Promise<{ data: ReportesData } | { er
   // Top 5 empresas por monto
   const byEmpresa: Record<string, { nombre: string; monto: number; status: string }> = {}
   for (const r of rows) {
-    const co = r.companies as Record<string, unknown> | null
+    const co = r.companies as unknown as Record<string, unknown> | null
     const nombre = (co?.nombre_razon_social as string) ?? 'Sin nombre'
     if (!byEmpresa[nombre] || (r.monto_solicitado ?? 0) > byEmpresa[nombre].monto) {
       byEmpresa[nombre] = { nombre, monto: r.monto_solicitado ?? 0, status: r.status }
