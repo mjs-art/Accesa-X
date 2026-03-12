@@ -79,7 +79,16 @@ export async function triggerSyncAction(
     body: { company_id: ctx.company.id, force },
   })
 
-  if (error) return { error: error.message ?? 'Error al iniciar sincronización' }
+  if (error) {
+    // FunctionsHttpError tiene el body en error.context — extraer mensaje real
+    let message: string = error.message ?? 'Error al iniciar sincronización'
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body = await (error as any).context?.json?.()
+      if (body?.error) message = body.error
+    } catch { /* usar message genérico */ }
+    return { error: message }
+  }
   if (!data?.jobId) return { error: 'Respuesta inesperada del servidor' }
 
   return { jobId: data.jobId as string, alreadySynced: data.alreadySynced ?? false }
