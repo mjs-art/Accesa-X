@@ -29,6 +29,7 @@ export default function InteligenciaResumenPage() {
   const [syncJob, setSyncJob]   = useState<SyncJob | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [needsVerification, setNeedsVerification] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   useEffect(() => { init() }, [])
 
@@ -60,21 +61,25 @@ export default function InteligenciaResumenPage() {
 
   async function handleSync(force = false) {
     setTriggering(true)
-    const result = await triggerSyncAction(force)
-    if ('error' in result) {
-      if (result.needsVerification) setNeedsVerification(true)
+    setSyncError(null)
+    try {
+      const result = await triggerSyncAction(force)
+      if ('error' in result) {
+        if (result.needsVerification) setNeedsVerification(true)
+        else setSyncError(result.error)
+        return
+      }
+      if (result.alreadySynced) {
+        await load()
+        return
+      }
+      const jobResult = await getSyncJobByIdAction(result.jobId)
+      if ('id' in jobResult) setSyncJob(jobResult)
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Error inesperado al sincronizar')
+    } finally {
       setTriggering(false)
-      return
     }
-    if (result.alreadySynced) {
-      // Sync ya completada — solo recargar datos sin tocar el estado de job
-      await load()
-      setTriggering(false)
-      return
-    }
-    const jobResult = await getSyncJobByIdAction(result.jobId)
-    if ('id' in jobResult) setSyncJob(jobResult)
-    setTriggering(false)
   }
 
   const kpis = [
@@ -155,6 +160,9 @@ export default function InteligenciaResumenPage() {
                 >
                   {triggering ? 'Iniciando...' : 'Sincronizar ahora'}
                 </button>
+                {syncError && (
+                  <p className="text-xs text-red-600 mt-3 max-w-xs">{syncError}</p>
+                )}
               </>
             )}
           </div>
