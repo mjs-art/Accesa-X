@@ -74,7 +74,7 @@ export default function CxPPage() {
           <p className="text-sm text-[#6B7280] mt-0.5">Facturas recibidas pendientes de pago — aging por antigüedad</p>
         </div>
 
-        <SyncBanner showWhenEmpty={!data || data.totalPorPagar === 0} />
+        <SyncBanner showWhenEmpty={!data || !data.hasSatData} />
 
         {loading ? (
           <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-[#3CBEDB]" /></div>

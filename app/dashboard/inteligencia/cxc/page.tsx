@@ -74,7 +74,7 @@ export default function CxCPage() {
           <p className="text-sm text-[#6B7280] mt-0.5">Facturas emitidas pendientes de pago — aging por antigüedad</p>
         </div>
 
-        <SyncBanner showWhenEmpty={!data || data.totalPorCobrar === 0} />
+        <SyncBanner showWhenEmpty={!data || !data.hasSatData} />
 
         {loading ? (
           <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-[#3CBEDB]" /></div>

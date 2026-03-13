@@ -101,6 +101,7 @@ export interface IngresosData {
   topClientes: TopItem[]
   totalAnual: number
   totalMesActual: number
+  hasSatData: boolean
 }
 
 export interface GastosData {
@@ -108,18 +109,21 @@ export interface GastosData {
   topProveedores: TopItem[]
   totalAnual: number
   totalMesActual: number
+  hasSatData: boolean
 }
 
 export interface CxcData {
   buckets: AgingBucket[]
   facturas: FacturaPendiente[]
   totalPorCobrar: number
+  hasSatData: boolean
 }
 
 export interface CxpData {
   buckets: AgingBucket[]
   facturas: FacturaPendiente[]
   totalPorPagar: number
+  hasSatData: boolean
 }
 
 export interface ResumenData {
@@ -140,6 +144,12 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
 
   const since = periodoToSince(periodo)
   const keys = periodoToMonthKeys(periodo)
+
+  const { count: satCount } = await supabase
+    .from('sat_cfdis')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', company.id)
+  const hasSatData = (satCount ?? 0) > 0
 
   const { data: cfdis, error } = await supabase
     .from('sat_cfdis')
@@ -162,6 +172,7 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
       topClientes: [],
       totalAnual: 0,
       totalMesActual: 0,
+      hasSatData,
     }
   }
 
@@ -207,6 +218,7 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
     topClientes,
     totalAnual,
     totalMesActual,
+    hasSatData,
   }
 }
 
@@ -219,6 +231,12 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
 
   const since = periodoToSince(periodo)
   const keys = periodoToMonthKeys(periodo)
+
+  const { count: satCount } = await supabase
+    .from('sat_cfdis')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', company.id)
+  const hasSatData = (satCount ?? 0) > 0
 
   const { data: cfdis, error } = await supabase
     .from('sat_cfdis')
@@ -241,6 +259,7 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
       topProveedores: [],
       totalAnual: 0,
       totalMesActual: 0,
+      hasSatData,
     }
   }
 
@@ -286,6 +305,7 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
     topProveedores,
     totalAnual,
     totalMesActual,
+    hasSatData,
   }
 }
 
@@ -295,6 +315,12 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
+
+  const { count: satCount } = await supabase
+    .from('sat_cfdis')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', company.id)
+  const hasSatData = (satCount ?? 0) > 0
 
   const { data: cfdis, error } = await supabase
     .from('sat_cfdis')
@@ -310,7 +336,7 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
     id: string; cfdi_uuid: string; total: number | null; issued_at: string; receiver_rfc: string | null
   }>
 
-  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorCobrar: 0 }
+  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorCobrar: 0, hasSatData }
 
   // Fetch payment states — only care about due_amount > 0
   const cfdiIds = rows.map(r => r.id)
@@ -354,7 +380,7 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
   const buckets = calcBuckets(facturas)
   const totalPorCobrar = facturas.reduce((s, f) => s + f.dueAmount, 0)
 
-  return { buckets, facturas: facturas.sort((a, b) => b.diasVencida - a.diasVencida), totalPorCobrar }
+  return { buckets, facturas: facturas.sort((a, b) => b.diasVencida - a.diasVencida), totalPorCobrar, hasSatData }
 }
 
 // ── CxP — Cuentas por pagar ────────────────────────────────────────────────────
@@ -363,6 +389,12 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
+
+  const { count: satCount } = await supabase
+    .from('sat_cfdis')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', company.id)
+  const hasSatData = (satCount ?? 0) > 0
 
   const { data: cfdis, error } = await supabase
     .from('sat_cfdis')
@@ -378,7 +410,7 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
     id: string; cfdi_uuid: string; total: number | null; issued_at: string; issuer_rfc: string | null
   }>
 
-  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorPagar: 0 }
+  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorPagar: 0, hasSatData }
 
   // Fetch payment states — only care about due_amount > 0
   const cfdiIds = rows.map(r => r.id)
@@ -422,7 +454,7 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
   const buckets = calcBuckets(facturas)
   const totalPorPagar = facturas.reduce((s, f) => s + f.dueAmount, 0)
 
-  return { buckets, facturas: facturas.sort((a, b) => b.diasVencida - a.diasVencida), totalPorPagar }
+  return { buckets, facturas: facturas.sort((a, b) => b.diasVencida - a.diasVencida), totalPorPagar, hasSatData }
 }
 
 // ── Resumen ────────────────────────────────────────────────────────────────────

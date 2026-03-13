@@ -80,7 +80,7 @@ export default function GastosPage() {
           </div>
         </div>
 
-        <SyncBanner showWhenEmpty={!data || data.totalAnual === 0} />
+        <SyncBanner showWhenEmpty={!data || !data.hasSatData} />
 
         <div className="grid grid-cols-3 gap-4">
           {[
