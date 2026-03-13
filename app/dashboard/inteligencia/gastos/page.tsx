@@ -24,6 +24,7 @@ const PERIODOS: { value: Periodo; label: string }[] = [
   { value: '6m', label: '6 meses' },
   { value: '12m', label: '12 meses' },
   { value: 'ytd', label: 'Este año' },
+  { value: 'custom', label: 'Personalizado' },
 ]
 
 function periodoLabel(p: Periodo) {
@@ -43,15 +44,24 @@ export default function GastosPage() {
   const [data, setData] = useState<GastosData | null>(null)
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState<Periodo>('12m')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
 
-  async function load(p: Periodo) {
+  async function load(p: Periodo, from?: string, to?: string) {
+    if (p === 'custom' && (!from || !to)) return
     setLoading(true)
-    const res = await getGastosAction(p)
+    const res = await getGastosAction(p, from, to)
     if (!('error' in res)) setData(res)
     setLoading(false)
   }
 
-  useEffect(() => { load(periodo) }, [periodo])
+  useEffect(() => {
+    if (periodo !== 'custom') load(periodo)
+  }, [periodo])
+
+  useEffect(() => {
+    if (periodo === 'custom' && customFrom && customTo) load('custom', customFrom, customTo)
+  }, [customFrom, customTo, periodo])
 
   const totalFacturas = data?.topProveedores.reduce((s, p) => s + p.count, 0) ?? 0
   const ticketProm = data && totalFacturas > 0 ? Math.round(data.totalAnual / totalFacturas) : 0
@@ -60,7 +70,7 @@ export default function GastosPage() {
     <div>
       <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-[#1A1A1A]">Inteligencia — Gastos</span>
-        <button onClick={() => load(periodo)} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
+        <button onClick={() => load(periodo, customFrom || undefined, customTo || undefined)} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </header>
@@ -71,20 +81,40 @@ export default function GastosPage() {
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Gastos</h1>
             <p className="text-sm text-[#6B7280] mt-0.5">Facturas recibidas · {periodoLabel(periodo)}</p>
           </div>
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-            {PERIODOS.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setPeriodo(value)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  periodo === value
-                    ? 'bg-white text-[#1A1A1A] shadow-sm'
-                    : 'text-[#6B7280] hover:text-[#1A1A1A]'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            {periodo === 'custom' && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-7 rounded-md border border-slate-200 px-2 text-xs text-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB]"
+                />
+                <span className="text-xs text-[#6B7280]">–</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-7 rounded-md border border-slate-200 px-2 text-xs text-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB]"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+              {PERIODOS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setPeriodo(value)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    periodo === value
+                      ? 'bg-white text-[#1A1A1A] shadow-sm'
+                      : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

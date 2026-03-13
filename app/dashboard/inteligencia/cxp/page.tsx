@@ -62,23 +62,62 @@ function AgingCard({ bucket, total }: { bucket: AgingBucket; total: number }) {
 export default function CxPPage() {
   const [data, setData] = useState<CxpData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
+  const [filterActive, setFilterActive] = useState(false)
 
-  async function load() {
+  async function load(from?: string, to?: string) {
     setLoading(true)
-    const res = await getCxpAction()
+    const res = await getCxpAction(from, to)
     if (!('error' in res)) setData(res)
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
+  function applyFilter() {
+    if (customFrom && customTo) { setFilterActive(true); load(customFrom, customTo) }
+  }
+
+  function clearFilter() {
+    setCustomFrom(''); setCustomTo(''); setFilterActive(false); load()
+  }
+
   return (
     <div>
       <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-[#1A1A1A]">Inteligencia — Cuentas por Pagar</span>
-        <button onClick={load} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="h-7 rounded-md border border-slate-200 px-2 text-xs text-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB]"
+            />
+            <span className="text-xs text-[#6B7280]">–</span>
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="h-7 rounded-md border border-slate-200 px-2 text-xs text-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB]"
+            />
+            {customFrom && customTo && !filterActive && (
+              <button onClick={applyFilter} className="h-7 px-2.5 rounded-md bg-[#3CBEDB] text-white text-xs font-medium">
+                Filtrar
+              </button>
+            )}
+            {filterActive && (
+              <button onClick={clearFilter} className="h-7 px-2.5 rounded-md border border-slate-200 text-xs text-[#6B7280] hover:text-[#1A1A1A]">
+                Limpiar
+              </button>
+            )}
+          </div>
+          <button onClick={() => load(filterActive ? customFrom : undefined, filterActive ? customTo : undefined)} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </header>
 
       <div className="px-8 py-8 space-y-6">

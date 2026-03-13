@@ -50,40 +50,60 @@ function daysSince(dateStr: string): number {
   return Math.floor((now.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-export type Periodo = '3m' | '6m' | '12m' | 'ytd'
+export type Periodo = '3m' | '6m' | '12m' | 'ytd' | 'custom'
 
-function periodoToSince(periodo: Periodo): Date {
+function periodoToSince(periodo: Periodo, customFrom?: string): Date {
+  if (periodo === 'custom' && customFrom) {
+    const d = new Date(customFrom)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  }
   const now = new Date()
-  if (periodo === '3m') {
-    const d = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-    return d
-  }
-  if (periodo === '6m') {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-    return d
-  }
-  if (periodo === 'ytd') {
-    return new Date(now.getFullYear(), 0, 1)
-  }
-  // '12m' default
-  const d = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-  return d
+  if (periodo === '3m') return new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  if (periodo === '6m') return new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  if (periodo === 'ytd') return new Date(now.getFullYear(), 0, 1)
+  return new Date(now.getFullYear(), now.getMonth() - 11, 1)
 }
 
-function periodoToPrevSince(periodo: Periodo, since: Date): Date {
+function periodoToUntil(periodo: Periodo, customTo?: string): string | null {
+  if (periodo === 'custom' && customTo) {
+    const d = new Date(customTo)
+    d.setDate(d.getDate() + 1) // inclusive end
+    return d.toISOString()
+  }
+  return null
+}
+
+function periodoToPrevSince(periodo: Periodo, since: Date, customFrom?: string, customTo?: string): Date {
+  if (periodo === 'custom' && customFrom && customTo) {
+    const duration = new Date(customTo).getTime() - new Date(customFrom).getTime()
+    return new Date(since.getTime() - duration)
+  }
   if (periodo === '3m') return new Date(since.getFullYear(), since.getMonth() - 3, 1)
   if (periodo === '6m') return new Date(since.getFullYear(), since.getMonth() - 6, 1)
   if (periodo === 'ytd') return new Date(since.getFullYear() - 1, 0, 1)
   return new Date(since.getFullYear() - 1, since.getMonth(), 1)
 }
 
-function periodoToMonthKeys(periodo: Periodo): string[] {
+function monthKeysBetween(from: Date, to: Date): string[] {
+  const keys: string[] = []
+  const cur = new Date(from.getFullYear(), from.getMonth(), 1)
+  const end = new Date(to.getFullYear(), to.getMonth(), 1)
+  while (cur <= end) {
+    keys.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`)
+    cur.setMonth(cur.getMonth() + 1)
+  }
+  return keys
+}
+
+function periodoToMonthKeys(periodo: Periodo, customFrom?: string, customTo?: string): string[] {
+  if (periodo === 'custom' && customFrom && customTo) {
+    return monthKeysBetween(new Date(customFrom), new Date(customTo))
+  }
   if (periodo === '3m') return monthKeysFor(3)
   if (periodo === '6m') return monthKeysFor(6)
   if (periodo === 'ytd') {
     const now = new Date()
-    const count = now.getMonth() + 1 // months elapsed this year
-    return monthKeysFor(count)
+    return monthKeysFor(now.getMonth() + 1)
   }
   return monthKeysFor(12)
 }
@@ -146,32 +166,41 @@ export interface ResumenData {
 
 // ── Ingresos ───────────────────────────────────────────────────────────────────
 
-export async function getIngresosAction(periodo: Periodo = '12m'): Promise<IngresosData | { error: string }> {
+export async function getIngresosAction(
+  periodo: Periodo = '12m',
+  customFrom?: string,
+  customTo?: string
+): Promise<IngresosData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const since = periodoToSince(periodo)
-  const keys = periodoToMonthKeys(periodo)
+  const since = periodoToSince(periodo, customFrom)
+  const until = periodoToUntil(periodo, customTo)
+  const keys = periodoToMonthKeys(periodo, customFrom, customTo)
+  const prevSince = periodoToPrevSince(periodo, since, customFrom, customTo)
 
-  const prevSince = periodoToPrevSince(periodo, since)
+  let mainQ = supabase.from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
+    .eq('company_id', company.id)
+    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', since.toISOString())
+    .order('issued_at', { ascending: false })
+  if (until) mainQ = mainQ.lt('issued_at', until)
+
+  let prevQ = supabase.from('sat_cfdis')
+    .select('total')
+    .eq('company_id', company.id)
+    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', prevSince.toISOString())
+    .lt('issued_at', since.toISOString())
 
   const [{ count: satCount }, { data: cfdis, error }, { data: prevCfdis }] = await Promise.all([
     supabase.from('sat_cfdis').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
-    supabase.from('sat_cfdis')
-      .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
-      .eq('company_id', company.id)
-      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
-      .eq('cfdi_status', 'vigente')
-      .gte('issued_at', since.toISOString())
-      .order('issued_at', { ascending: false }),
-    supabase.from('sat_cfdis')
-      .select('total')
-      .eq('company_id', company.id)
-      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
-      .eq('cfdi_status', 'vigente')
-      .gte('issued_at', prevSince.toISOString())
-      .lt('issued_at', since.toISOString()),
+    mainQ,
+    prevQ,
   ])
 
   const hasSatData = (satCount ?? 0) > 0
@@ -244,32 +273,41 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
 
 // ── Gastos ─────────────────────────────────────────────────────────────────────
 
-export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosData | { error: string }> {
+export async function getGastosAction(
+  periodo: Periodo = '12m',
+  customFrom?: string,
+  customTo?: string
+): Promise<GastosData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const since = periodoToSince(periodo)
-  const keys = periodoToMonthKeys(periodo)
+  const since = periodoToSince(periodo, customFrom)
+  const until = periodoToUntil(periodo, customTo)
+  const keys = periodoToMonthKeys(periodo, customFrom, customTo)
+  const prevSince = periodoToPrevSince(periodo, since, customFrom, customTo)
 
-  const prevSince = periodoToPrevSince(periodo, since)
+  let mainQ = supabase.from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
+    .eq('company_id', company.id)
+    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', since.toISOString())
+    .order('issued_at', { ascending: false })
+  if (until) mainQ = mainQ.lt('issued_at', until)
+
+  let prevQ = supabase.from('sat_cfdis')
+    .select('total')
+    .eq('company_id', company.id)
+    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', prevSince.toISOString())
+    .lt('issued_at', since.toISOString())
 
   const [{ count: satCount }, { data: cfdis, error }, { data: prevCfdis }] = await Promise.all([
     supabase.from('sat_cfdis').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
-    supabase.from('sat_cfdis')
-      .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
-      .eq('company_id', company.id)
-      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
-      .eq('cfdi_status', 'vigente')
-      .gte('issued_at', since.toISOString())
-      .order('issued_at', { ascending: false }),
-    supabase.from('sat_cfdis')
-      .select('total')
-      .eq('company_id', company.id)
-      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
-      .eq('cfdi_status', 'vigente')
-      .gte('issued_at', prevSince.toISOString())
-      .lt('issued_at', since.toISOString()),
+    mainQ,
+    prevQ,
   ])
 
   const hasSatData = (satCount ?? 0) > 0
@@ -342,7 +380,10 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
 
 // ── CxC — Cuentas por cobrar ───────────────────────────────────────────────────
 
-export async function getCxcAction(): Promise<CxcData | { error: string }> {
+export async function getCxcAction(
+  customFrom?: string,
+  customTo?: string
+): Promise<CxcData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
@@ -353,13 +394,18 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
     .eq('company_id', company.id)
   const hasSatData = (satCount ?? 0) > 0
 
-  const { data: cfdis, error } = await supabase
-    .from('sat_cfdis')
+  let q = supabase.from('sat_cfdis')
     .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
     .eq('company_id', company.id)
     .eq('issuer_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
     .order('issued_at', { ascending: true })
+  if (customFrom) q = q.gte('issued_at', new Date(customFrom).toISOString())
+  if (customTo) {
+    const d = new Date(customTo); d.setDate(d.getDate() + 1)
+    q = q.lt('issued_at', d.toISOString())
+  }
+  const { data: cfdis, error } = await q
 
   if (error) return { error: error.message }
 
@@ -416,7 +462,10 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
 
 // ── CxP — Cuentas por pagar ────────────────────────────────────────────────────
 
-export async function getCxpAction(): Promise<CxpData | { error: string }> {
+export async function getCxpAction(
+  customFrom?: string,
+  customTo?: string
+): Promise<CxpData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
@@ -427,13 +476,18 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
     .eq('company_id', company.id)
   const hasSatData = (satCount ?? 0) > 0
 
-  const { data: cfdis, error } = await supabase
-    .from('sat_cfdis')
+  let q = supabase.from('sat_cfdis')
     .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
     .eq('company_id', company.id)
     .eq('receiver_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
     .order('issued_at', { ascending: true })
+  if (customFrom) q = q.gte('issued_at', new Date(customFrom).toISOString())
+  if (customTo) {
+    const d = new Date(customTo); d.setDate(d.getDate() + 1)
+    q = q.lt('issued_at', d.toISOString())
+  }
+  const { data: cfdis, error } = await q
 
   if (error) return { error: error.message }
 
