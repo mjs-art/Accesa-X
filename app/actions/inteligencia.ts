@@ -70,6 +70,13 @@ function periodoToSince(periodo: Periodo): Date {
   return d
 }
 
+function periodoToPrevSince(periodo: Periodo, since: Date): Date {
+  if (periodo === '3m') return new Date(since.getFullYear(), since.getMonth() - 3, 1)
+  if (periodo === '6m') return new Date(since.getFullYear(), since.getMonth() - 6, 1)
+  if (periodo === 'ytd') return new Date(since.getFullYear() - 1, 0, 1)
+  return new Date(since.getFullYear() - 1, since.getMonth(), 1)
+}
+
 function periodoToMonthKeys(periodo: Periodo): string[] {
   if (periodo === '3m') return monthKeysFor(3)
   if (periodo === '6m') return monthKeysFor(6)
@@ -101,6 +108,7 @@ export interface IngresosData {
   topClientes: TopItem[]
   totalAnual: number
   totalMesActual: number
+  totalPeriodoAnterior: number
   hasSatData: boolean
 }
 
@@ -109,6 +117,7 @@ export interface GastosData {
   topProveedores: TopItem[]
   totalAnual: number
   totalMesActual: number
+  totalPeriodoAnterior: number
   hasSatData: boolean
 }
 
@@ -145,20 +154,29 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
   const since = periodoToSince(periodo)
   const keys = periodoToMonthKeys(periodo)
 
-  const { count: satCount } = await supabase
-    .from('sat_cfdis')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', company.id)
-  const hasSatData = (satCount ?? 0) > 0
+  const prevSince = periodoToPrevSince(periodo, since)
 
-  const { data: cfdis, error } = await supabase
-    .from('sat_cfdis')
-    .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
-    .eq('company_id', company.id)
-    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
-    .eq('cfdi_status', 'vigente')
-    .gte('issued_at', since.toISOString())
-    .order('issued_at', { ascending: false })
+  const [{ count: satCount }, { data: cfdis, error }, { data: prevCfdis }] = await Promise.all([
+    supabase.from('sat_cfdis').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
+    supabase.from('sat_cfdis')
+      .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
+      .eq('company_id', company.id)
+      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', since.toISOString())
+      .order('issued_at', { ascending: false }),
+    supabase.from('sat_cfdis')
+      .select('total')
+      .eq('company_id', company.id)
+      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', prevSince.toISOString())
+      .lt('issued_at', since.toISOString()),
+  ])
+
+  const hasSatData = (satCount ?? 0) > 0
+  const totalPeriodoAnterior = ((prevCfdis ?? []) as unknown as Array<{ total: number | null }>)
+    .reduce((s, r) => s + (r.total ?? 0), 0)
 
   if (error) return { error: error.message }
 
@@ -172,6 +190,7 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
       topClientes: [],
       totalAnual: 0,
       totalMesActual: 0,
+      totalPeriodoAnterior,
       hasSatData,
     }
   }
@@ -218,6 +237,7 @@ export async function getIngresosAction(periodo: Periodo = '12m'): Promise<Ingre
     topClientes,
     totalAnual,
     totalMesActual,
+    totalPeriodoAnterior,
     hasSatData,
   }
 }
@@ -232,20 +252,29 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
   const since = periodoToSince(periodo)
   const keys = periodoToMonthKeys(periodo)
 
-  const { count: satCount } = await supabase
-    .from('sat_cfdis')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', company.id)
-  const hasSatData = (satCount ?? 0) > 0
+  const prevSince = periodoToPrevSince(periodo, since)
 
-  const { data: cfdis, error } = await supabase
-    .from('sat_cfdis')
-    .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
-    .eq('company_id', company.id)
-    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
-    .eq('cfdi_status', 'vigente')
-    .gte('issued_at', since.toISOString())
-    .order('issued_at', { ascending: false })
+  const [{ count: satCount }, { data: cfdis, error }, { data: prevCfdis }] = await Promise.all([
+    supabase.from('sat_cfdis').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
+    supabase.from('sat_cfdis')
+      .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
+      .eq('company_id', company.id)
+      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', since.toISOString())
+      .order('issued_at', { ascending: false }),
+    supabase.from('sat_cfdis')
+      .select('total')
+      .eq('company_id', company.id)
+      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', prevSince.toISOString())
+      .lt('issued_at', since.toISOString()),
+  ])
+
+  const hasSatData = (satCount ?? 0) > 0
+  const totalPeriodoAnterior = ((prevCfdis ?? []) as unknown as Array<{ total: number | null }>)
+    .reduce((s, r) => s + (r.total ?? 0), 0)
 
   if (error) return { error: error.message }
 
@@ -259,6 +288,7 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
       topProveedores: [],
       totalAnual: 0,
       totalMesActual: 0,
+      totalPeriodoAnterior,
       hasSatData,
     }
   }
@@ -305,6 +335,7 @@ export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosD
     topProveedores,
     totalAnual,
     totalMesActual,
+    totalPeriodoAnterior,
     hasSatData,
   }
 }

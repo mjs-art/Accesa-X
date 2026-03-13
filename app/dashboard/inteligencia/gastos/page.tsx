@@ -30,6 +30,14 @@ function periodoLabel(p: Periodo) {
   return PERIODOS.find(x => x.value === p)?.label ?? p
 }
 
+function TrendBadge({ current, previous }: { current: number; previous: number }) {
+  if (previous === 0) return null
+  const pct = Math.round(((current - previous) / previous) * 100)
+  if (pct > 0) return <span className="text-xs font-medium text-red-500">↑ {pct}% vs periodo ant.</span>
+  if (pct < 0) return <span className="text-xs font-medium text-emerald-600">↓ {Math.abs(pct)}% vs periodo ant.</span>
+  return <span className="text-xs text-[#6B7280]">= sin cambio</span>
+}
+
 export default function GastosPage() {
   const router = useRouter()
   const [data, setData] = useState<GastosData | null>(null)
@@ -84,9 +92,9 @@ export default function GastosPage() {
 
         <div className="grid grid-cols-3 gap-4">
           {[
-            { title: 'Total gastos', value: data ? formatMXN(data.totalAnual) : '—', sub: periodoLabel(periodo), icon: <ArrowDownRight className="h-4 w-4 text-red-500" />, bg: 'bg-red-50' },
-            { title: 'Proveedores únicos', value: data ? String(data.topProveedores.length) : '—', sub: 'Con al menos 1 factura', icon: <Truck className="h-4 w-4 text-[#3CBEDB]" />, bg: 'bg-[#3CBEDB]/10' },
-            { title: 'Gasto promedio/factura', value: ticketProm > 0 ? formatMXN(ticketProm) : '—', sub: `${totalFacturas} facturas recibidas`, icon: <FileText className="h-4 w-4 text-violet-500" />, bg: 'bg-violet-50' },
+            { title: 'Total gastos', value: data ? formatMXN(data.totalAnual) : '—', sub: periodoLabel(periodo), trend: data ? { current: data.totalAnual, previous: data.totalPeriodoAnterior } : null, icon: <ArrowDownRight className="h-4 w-4 text-red-500" />, bg: 'bg-red-50' },
+            { title: 'Proveedores únicos', value: data ? String(data.topProveedores.length) : '—', sub: 'Con al menos 1 factura', trend: null, icon: <Truck className="h-4 w-4 text-[#3CBEDB]" />, bg: 'bg-[#3CBEDB]/10' },
+            { title: 'Gasto promedio/factura', value: ticketProm > 0 ? formatMXN(ticketProm) : '—', sub: `${totalFacturas} facturas recibidas`, trend: null, icon: <FileText className="h-4 w-4 text-violet-500" />, bg: 'bg-violet-50' },
           ].map((kpi) => (
             <Card key={kpi.title} className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -95,7 +103,13 @@ export default function GastosPage() {
               </CardHeader>
               <CardContent>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin text-slate-300" /> : (
-                  <><p className="text-2xl font-bold text-[#1A1A1A]">{kpi.value}</p><p className="text-xs text-[#6B7280] mt-1">{kpi.sub}</p></>
+                  <>
+                    <p className="text-2xl font-bold text-[#1A1A1A]">{kpi.value}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-[#6B7280]">{kpi.sub}</p>
+                      {kpi.trend && <TrendBadge current={kpi.trend.current} previous={kpi.trend.previous} />}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

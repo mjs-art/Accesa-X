@@ -5,7 +5,7 @@ import { getCxpAction } from '@/app/actions/inteligencia'
 import type { CxpData, AgingBucket } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, AlertTriangle, Download } from 'lucide-react'
 import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
@@ -21,6 +21,19 @@ function bucketColor(label: string) {
   if (label === 'Atrasada') return { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', bar: 'bg-orange-400' }
   if (label === 'Vencida') return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', bar: 'bg-amber-400' }
   return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', bar: 'bg-slate-300' }
+}
+
+function downloadCSV(filename: string, facturas: CxpData['facturas']) {
+  const headers = ['UUID', 'Proveedor', 'RFC', 'Fecha', 'Monto', 'Por pagar', 'Dias vencida']
+  const rows = facturas.map(f => [
+    f.uuid, f.contraparte, f.contraparteRfc, f.issuedAt,
+    f.monto.toFixed(2), f.dueAmount.toFixed(2), String(f.diasVencida),
+  ])
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+  a.download = filename
+  a.click()
 }
 
 function AgeBadge({ dias }: { dias: number }) {
@@ -108,10 +121,17 @@ export default function CxPPage() {
             )}
 
             <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[#1A1A1A]">
                   Facturas pendientes ({data.facturas.length})
                 </CardTitle>
+                <button
+                  onClick={() => downloadCSV('cxp.csv', data.facturas)}
+                  className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Exportar CSV
+                </button>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -127,7 +147,7 @@ export default function CxPPage() {
                   </TableHeader>
                   <TableBody>
                     {data.facturas.map((f) => (
-                      <TableRow key={f.uuid} className="hover:bg-slate-50/60">
+                      <TableRow key={f.uuid} className={f.diasVencida > 90 ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50/60'}>
                         <TableCell className="pl-6 text-xs font-mono text-[#6B7280]">{truncateUUID(f.uuid)}</TableCell>
                         <TableCell>
                           <p className="text-sm font-medium text-[#1A1A1A] max-w-[180px] truncate">{f.contraparte}</p>
