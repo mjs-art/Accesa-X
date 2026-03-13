@@ -42,38 +42,51 @@ export interface SyntageAnnualReturn {
 interface SyntageListResponse<T> {
   'hydra:member':     T[]
   'hydra:totalItems': number
+  'hydra:view'?: {
+    'hydra:next'?: string
+  }
 }
 
-// Obtiene todas las páginas de un endpoint paginado de Syntage
+// Obtiene todas las páginas de un endpoint de Syntage.
+// Soporta cursor pagination (hydra:view → hydra:next) y offset pagination.
 export async function fetchAllPages<T>(
   baseUrl: URL,
   apiKey: string,
 ): Promise<T[]> {
   const all: T[] = []
-  let page = 1
   const itemsPerPage = 300
 
-  while (true) {
-    const url = new URL(baseUrl.toString())
-    url.searchParams.set('itemsPerPage', String(itemsPerPage))
-    url.searchParams.set('page', String(page))
+  // Primera petición sin número de página (cursor pagination lo requiere)
+  const firstUrl = new URL(baseUrl.toString())
+  firstUrl.searchParams.set('itemsPerPage', String(itemsPerPage))
+  firstUrl.searchParams.delete('page')
 
-    const res = await fetch(url.toString(), {
+  let nextUrl: string | null = firstUrl.toString()
+
+  while (nextUrl) {
+    console.log(`Syntage fetchAllPages GET ${nextUrl}`)
+    const res = await fetch(nextUrl, {
       headers: { 'X-API-Key': apiKey },
     })
 
     if (!res.ok) {
-      console.error(`Syntage fetchAllPages p${page} ${res.status}:`, await res.text())
+      console.error(`Syntage fetchAllPages ${res.status}:`, await res.text())
       break
     }
 
     const data: SyntageListResponse<T> = await res.json()
     const items = data['hydra:member'] ?? []
+    console.log(`Syntage fetchAllPages OK — totalItems:${data['hydra:totalItems']} items:${items.length}`)
     all.push(...items)
 
-    const total = data['hydra:totalItems'] ?? 0
-    if (all.length >= total || items.length < itemsPerPage) break
-    page++
+    if (items.length === 0) break
+
+    const nextPath = data['hydra:view']?.['hydra:next']
+    if (!nextPath) break
+
+    nextUrl = nextPath.startsWith('http')
+      ? nextPath
+      : `${baseUrl.protocol}//${baseUrl.host}${nextPath}`
   }
 
   return all

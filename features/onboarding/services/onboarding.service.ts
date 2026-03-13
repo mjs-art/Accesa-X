@@ -3,7 +3,6 @@ import type { ILegalRepRepository } from '../repositories/legal-rep.repository'
 import type { IShareholderRepository } from '../repositories/shareholder.repository'
 import type { IInvitationRepository } from '../repositories/invitation.repository'
 import type { IDocumentRepository } from '../repositories/document.repository'
-import type { IOnboardingCreditRepository } from '../repositories/credit-application.repository'
 import type { Company, LegalRepresentative, Shareholder, OnboardingStep } from '../types/onboarding.types'
 import type { CompanyFormData } from '../schemas/company.schema'
 import type { LegalRepFormData } from '../schemas/legal-rep.schema'
@@ -31,7 +30,6 @@ export class OnboardingService {
     private readonly shareholderRepo: IShareholderRepository,
     private readonly invitationRepo: IInvitationRepository,
     private readonly documentRepo: IDocumentRepository,
-    private readonly creditRepo: IOnboardingCreditRepository,
   ) {}
 
   async getCurrentStep(userId: string): Promise<OnboardingStep> {
@@ -103,7 +101,6 @@ export class OnboardingService {
 
   async completeOnboarding(companyId: string): Promise<void> {
     await this.companyRepo.markOnboardingComplete(companyId)
-    await this.creditRepo.createInitial(companyId)
   }
 
   async getSummary(userId: string): Promise<OnboardingSummary> {

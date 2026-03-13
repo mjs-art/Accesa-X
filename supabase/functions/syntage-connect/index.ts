@@ -119,11 +119,11 @@ serve(async (req) => {
       status = 'error'
     }
 
-    // 7. Actualizar companies en DB — guardar entity_id (no credential_id)
+    // 7. Actualizar companies en DB — guardar credential_id real (no entity_id)
     await adminClient
       .from('companies')
       .update({
-        credential_id: entity_id,
+        credential_id: credential_id,
         syntage_validated_at: status === 'valid' ? new Date().toISOString() : null,
         syntage_raw_response: rawResponse,
         estatus_sat: status === 'valid' ? 'Activo' : null,

@@ -10,7 +10,6 @@ import { SupabaseLegalRepRepository } from '@/features/onboarding/repositories/l
 import { SupabaseShareholderRepository } from '@/features/onboarding/repositories/shareholder.repository.impl'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import { SupabaseDocumentRepository } from '@/features/onboarding/repositories/document.repository.impl'
-import { SupabaseCreditApplicationRepository } from '@/features/onboarding/repositories/credit-application.repository.impl'
 import type { OnboardingStep, CompanyDocumentType } from '@/features/onboarding/types/onboarding.types'
 import { REQUIRED_COMPANY_DOC_TYPES } from '@/features/onboarding/services/onboarding.service'
 import type { ShareholderFormData } from '@/features/onboarding/schemas/shareholder.schema'
@@ -22,7 +21,6 @@ function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
     new SupabaseShareholderRepository(supabase),
     new SupabaseInvitationRepository(supabase),
     new SupabaseDocumentRepository(supabase),
-    new SupabaseCreditApplicationRepository(supabase),
   )
 }
 

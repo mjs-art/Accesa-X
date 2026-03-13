@@ -96,15 +96,16 @@ export async function runSync(
 
     // ── Fase 3: Disparar extracciones ───────────────────────────────
     await updatePhase(adminClient, jobId, 'trigger_extractions', 20)
-    await triggerExtractions(entityIri, apiKey, baseUrl)
-
-    // ── Fase 4: Descargar facturas emitidas ─────────────────────────
-    await updatePhase(adminClient, jobId, 'fetch_cfdis_emitidos', 30)
 
     const emitidosUrl = new URL(`${baseUrl}/taxpayers/${encodeURIComponent(company.rfc)}/invoices`)
     emitidosUrl.searchParams.set('isIssuer', 'true')
     emitidosUrl.searchParams.set('type', 'I')
     emitidosUrl.searchParams.set('order[issuedAt]', 'desc')
+
+    await triggerExtractions(entityIri, apiKey, baseUrl)
+
+    // ── Fase 4: Descargar facturas emitidas ─────────────────────────
+    await updatePhase(adminClient, jobId, 'fetch_cfdis_emitidos', 30)
 
     const emitidos = await fetchAllPages<SyntageInvoice>(emitidosUrl, apiKey)
 

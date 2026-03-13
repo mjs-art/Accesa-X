@@ -80,12 +80,24 @@ export async function triggerSyncAction(
   })
 
   if (error) {
-    // FunctionsHttpError tiene el body en error.context — extraer mensaje real
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.error('[triggerSyncAction] error name:', error.name, 'message:', error.message, 'context type:', typeof (error as any).context, 'context:', (error as any).context)
     let message: string = error.message ?? 'Error al iniciar sincronización'
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const body = await (error as any).context?.json?.()
-      if (body?.error) message = body.error
+      const ctx = (error as any).context
+      if (ctx instanceof Response) {
+        const text = await ctx.text()
+        try {
+          const parsed = JSON.parse(text)
+          if (parsed?.error) message = parsed.error
+          else message = text || message
+        } catch {
+          if (text) message = text
+        }
+      } else if (ctx?.error) {
+        message = ctx.error
+      }
     } catch { /* usar message genérico */ }
     return { error: message }
   }

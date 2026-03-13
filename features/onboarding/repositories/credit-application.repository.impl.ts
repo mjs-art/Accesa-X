@@ -12,6 +12,7 @@ export class SupabaseCreditApplicationRepository implements IOnboardingCreditRep
         tipo_credito: 'empresarial',
         status: 'submitted',
         monto_solicitado: 0,
+        plazo_meses: 0,
       })
 
     if (error) throw new Error(error.message)

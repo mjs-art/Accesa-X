@@ -23,11 +23,11 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return jsonError('Unauthorized', 401)
 
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: { user }, error: userError } = await userClient.auth.getUser()
-    if (userError || !user) return jsonError('Unauthorized', 401)
+    // JWT ya fue validado por el gateway de Supabase — solo decodificar el payload
+    const jwt = authHeader.replace('Bearer ', '')
+    const jwtPayload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    const userId: string | undefined = jwtPayload?.sub
+    if (!userId) return jsonError('Unauthorized', 401)
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -40,7 +40,7 @@ serve(async (req) => {
     let companyQuery = adminClient
       .from('companies')
       .select('id, rfc, credential_id, syntage_validated_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (company_id) {
       companyQuery = companyQuery.eq('id', company_id)
