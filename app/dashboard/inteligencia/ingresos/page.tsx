@@ -7,7 +7,7 @@ import type { IngresosData, Periodo } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { ArrowUpRight, FileText, Loader2, RefreshCw, Users } from 'lucide-react'
+import { ArrowUpRight, FileText, Loader2, RefreshCw, Users, Search } from 'lucide-react'
 import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
@@ -65,6 +65,10 @@ export default function IngresosPage() {
 
   const totalFacturas = data?.topClientes.reduce((s, c) => s + c.count, 0) ?? 0
   const ticketProm = data && totalFacturas > 0 ? Math.round(data.totalAnual / totalFacturas) : 0
+  const [searchClientes, setSearchClientes] = useState('')
+  const filteredClientes = (data?.topClientes ?? []).filter(
+    (c) => !searchClientes || c.nombre.toLowerCase().includes(searchClientes.toLowerCase()) || c.rfc.toLowerCase().includes(searchClientes.toLowerCase())
+  )
 
   return (
     <div>
@@ -168,8 +172,18 @@ export default function IngresosPage() {
         </Card>
 
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-[#1A1A1A]">Clientes por ingreso</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+              <input
+                type="text"
+                placeholder="Buscar cliente o RFC..."
+                value={searchClientes}
+                onChange={(e) => setSearchClientes(e.target.value)}
+                className="h-7 pl-8 pr-3 rounded-md border border-slate-200 text-xs text-[#1A1A1A] placeholder:text-[#6B7280] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB] w-48"
+              />
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
@@ -188,7 +202,7 @@ export default function IngresosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.topClientes.map((c) => {
+                  {filteredClientes.map((c) => {
                     const pct = data.totalAnual > 0 ? Math.round((c.total / data.totalAnual) * 100) : 0
                     return (
                       <TableRow

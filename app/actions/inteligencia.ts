@@ -542,6 +542,94 @@ export async function getCxpAction(
   return { buckets, facturas: facturas.sort((a, b) => b.diasVencida - a.diasVencida), totalPorPagar, hasSatData }
 }
 
+// ── Flujo de Caja / Margen ─────────────────────────────────────────────────────
+
+export interface FlujoCajaData {
+  meses: {
+    mes: string
+    label: string
+    entradas: number
+    salidas: number
+    neto: number
+    margenPct: number
+  }[]
+  totalEntradas: number
+  totalSalidas: number
+  netoTotal: number
+  margenPctTotal: number
+  mesesNegativos: number
+  hasSatData: boolean
+}
+
+export async function getFlujoCajaAction(
+  periodo: Periodo = '12m',
+  customFrom?: string,
+  customTo?: string
+): Promise<FlujoCajaData | { error: string }> {
+  const ctx = await getCompanyContext()
+  if (!ctx) return { error: 'No autenticado' }
+  const { supabase, company } = ctx
+
+  const since = periodoToSince(periodo, customFrom)
+  const until = periodoToUntil(periodo, customTo)
+  const keys = periodoToMonthKeys(periodo, customFrom, customTo)
+
+  let emitidosQ = supabase.from('sat_cfdis')
+    .select('total, issued_at')
+    .eq('company_id', company.id)
+    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', since.toISOString())
+  if (until) emitidosQ = emitidosQ.lt('issued_at', until)
+
+  let recibidosQ = supabase.from('sat_cfdis')
+    .select('total, issued_at')
+    .eq('company_id', company.id)
+    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .gte('issued_at', since.toISOString())
+  if (until) recibidosQ = recibidosQ.lt('issued_at', until)
+
+  const [{ count: satCount }, emitidosRes, recibidosRes] = await Promise.all([
+    supabase.from('sat_cfdis').select('id', { count: 'exact', head: true }).eq('company_id', company.id),
+    emitidosQ,
+    recibidosQ,
+  ])
+
+  const hasSatData = (satCount ?? 0) > 0
+
+  const byMonth: Record<string, { entradas: number; salidas: number }> = {}
+  keys.forEach((k) => (byMonth[k] = { entradas: 0, salidas: 0 }))
+
+  for (const r of (emitidosRes.data ?? []) as unknown as Array<{ total: number | null; issued_at: string }>) {
+    const mk = monthKey(r.issued_at)
+    if (byMonth[mk]) byMonth[mk].entradas += r.total ?? 0
+  }
+  for (const r of (recibidosRes.data ?? []) as unknown as Array<{ total: number | null; issued_at: string }>) {
+    const mk = monthKey(r.issued_at)
+    if (byMonth[mk]) byMonth[mk].salidas += r.total ?? 0
+  }
+
+  let totalEntradas = 0
+  let totalSalidas = 0
+  let mesesNegativos = 0
+
+  const meses = keys.map((k) => {
+    const { entradas, salidas } = byMonth[k]
+    const neto = entradas - salidas
+    const margenPct = entradas > 0 ? Math.round((neto / entradas) * 100) : 0
+    totalEntradas += entradas
+    totalSalidas += salidas
+    if (neto < 0) mesesNegativos++
+    return { mes: k, label: monthLabel(k), entradas, salidas, neto, margenPct }
+  })
+
+  const netoTotal = totalEntradas - totalSalidas
+  const margenPctTotal = totalEntradas > 0 ? Math.round((netoTotal / totalEntradas) * 100) : 0
+
+  return { meses, totalEntradas, totalSalidas, netoTotal, margenPctTotal, mesesNegativos, hasSatData }
+}
+
 // ── Resumen ────────────────────────────────────────────────────────────────────
 
 export async function getResumenAction(): Promise<ResumenData | { error: string }> {

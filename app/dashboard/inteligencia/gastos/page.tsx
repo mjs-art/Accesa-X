@@ -7,7 +7,7 @@ import type { GastosData, Periodo } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { ArrowDownRight, FileText, Loader2, RefreshCw, Truck } from 'lucide-react'
+import { ArrowDownRight, FileText, Loader2, RefreshCw, Truck, Search } from 'lucide-react'
 import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
@@ -65,6 +65,10 @@ export default function GastosPage() {
 
   const totalFacturas = data?.topProveedores.reduce((s, p) => s + p.count, 0) ?? 0
   const ticketProm = data && totalFacturas > 0 ? Math.round(data.totalAnual / totalFacturas) : 0
+  const [searchProveedores, setSearchProveedores] = useState('')
+  const filteredProveedores = (data?.topProveedores ?? []).filter(
+    (p) => !searchProveedores || p.nombre.toLowerCase().includes(searchProveedores.toLowerCase()) || p.rfc.toLowerCase().includes(searchProveedores.toLowerCase())
+  )
 
   return (
     <div>
@@ -168,8 +172,18 @@ export default function GastosPage() {
         </Card>
 
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-[#1A1A1A]">Proveedores por gasto</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+              <input
+                type="text"
+                placeholder="Buscar proveedor o RFC..."
+                value={searchProveedores}
+                onChange={(e) => setSearchProveedores(e.target.value)}
+                className="h-7 pl-8 pr-3 rounded-md border border-slate-200 text-xs text-[#1A1A1A] placeholder:text-[#6B7280] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB] w-48"
+              />
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
@@ -188,7 +202,7 @@ export default function GastosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.topProveedores.map((p) => {
+                  {filteredProveedores.map((p) => {
                     const pct = data.totalAnual > 0 ? Math.round((p.total / data.totalAnual) * 100) : 0
                     return (
                       <TableRow

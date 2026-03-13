@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BarChart3, CreditCard, User, LogOut,
   ChevronDown, TrendingUp, TrendingDown, Clock, AlertCircle,
-  FileText, PlusCircle, Truck, Activity,
+  FileText, PlusCircle, Truck, Activity, Wallet, Percent,
 } from 'lucide-react'
 import { useState } from 'react'
 import { signOutAction } from '@/app/actions/dashboard'
@@ -33,6 +33,8 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
           { label: 'Gastos', href: '/dashboard/inteligencia/gastos', icon: TrendingDown },
           { label: 'Por cobrar', href: '/dashboard/inteligencia/cxc', icon: Clock },
           { label: 'Por pagar', href: '/dashboard/inteligencia/cxp', icon: AlertCircle },
+          { label: 'Flujo de Caja', href: '/dashboard/inteligencia/flujo-caja', icon: Wallet },
+          { label: 'Margen', href: '/dashboard/inteligencia/margen', icon: Percent },
           { label: 'Análisis', href: '/dashboard/inteligencia/analisis', icon: Activity },
         ],
       },

@@ -5,7 +5,7 @@ import { getCxcAction } from '@/app/actions/inteligencia'
 import type { CxcData, AgingBucket } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Clock, Loader2, RefreshCw, CheckCircle2, AlertTriangle, Download } from 'lucide-react'
+import { Clock, Loader2, RefreshCw, CheckCircle2, AlertTriangle, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SyncBanner } from '@/components/inteligencia/SyncBanner'
 
 function formatMXN(n: number) {
@@ -59,12 +59,16 @@ function AgingCard({ bucket, total }: { bucket: AgingBucket; total: number }) {
   )
 }
 
+const PAGE_SIZE = 20
+
 export default function CxCPage() {
   const [data, setData] = useState<CxcData | null>(null)
   const [loading, setLoading] = useState(true)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [filterActive, setFilterActive] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
 
   async function load(from?: string, to?: string) {
     setLoading(true)
@@ -82,6 +86,12 @@ export default function CxCPage() {
   function clearFilter() {
     setCustomFrom(''); setCustomTo(''); setFilterActive(false); load()
   }
+
+  const filtered = (data?.facturas ?? []).filter(
+    (f) => !search || f.contraparte.toLowerCase().includes(search.toLowerCase()) || f.contraparteRfc.toLowerCase().includes(search.toLowerCase())
+  )
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <div>
@@ -164,17 +174,29 @@ export default function CxCPage() {
 
             {/* Tabla facturas individuales */}
             <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1A1A1A]">
-                  Facturas pendientes ({data.facturas.length})
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <CardTitle className="text-sm font-semibold text-[#1A1A1A] shrink-0">
+                  Facturas pendientes ({filtered.length}{search ? ` de ${data.facturas.length}` : ''})
                 </CardTitle>
-                <button
-                  onClick={() => downloadCSV('cxc.csv', data.facturas)}
-                  className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Exportar CSV
-                </button>
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6B7280]" />
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente o RFC..."
+                      value={search}
+                      onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+                      className="h-7 pl-8 pr-3 rounded-md border border-slate-200 text-xs text-[#1A1A1A] placeholder:text-[#6B7280] focus:outline-none focus:ring-1 focus:ring-[#3CBEDB] w-52"
+                    />
+                  </div>
+                  <button
+                    onClick={() => downloadCSV('cxc.csv', data.facturas)}
+                    className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] transition-colors shrink-0"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Exportar CSV
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -189,7 +211,13 @@ export default function CxCPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.facturas.map((f) => (
+                    {paginated.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-xs text-[#6B7280] py-10">
+                          Sin resultados para "{search}"
+                        </TableCell>
+                      </TableRow>
+                    ) : paginated.map((f) => (
                       <TableRow key={f.uuid} className={f.diasVencida > 90 ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50/60'}>
                         <TableCell className="pl-6 text-xs font-mono text-[#6B7280]">{truncateUUID(f.uuid)}</TableCell>
                         <TableCell>
@@ -204,6 +232,29 @@ export default function CxCPage() {
                     ))}
                   </TableBody>
                 </Table>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
+                    <p className="text-xs text-[#6B7280]">
+                      Página {page + 1} de {totalPages} · {filtered.length} facturas
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                        className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 disabled:opacity-40 hover:bg-slate-50"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5 text-[#6B7280]" />
+                      </button>
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={page >= totalPages - 1}
+                        className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 disabled:opacity-40 hover:bg-slate-50"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5 text-[#6B7280]" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>
