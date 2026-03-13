@@ -18,6 +18,18 @@ interface Props {
 export function SyncProgress({ initialJob, onCompleted, className }: Props) {
   const [job, setJob] = useState<SyncJob>(initialJob)
   const [retrying, setRetrying] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    if (job.status !== 'queued' && job.status !== 'running') return
+    const interval = setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => clearInterval(interval)
+  }, [job.status])
+
+  function fmtElapsed(s: number) {
+    if (s < 60) return `${s}s`
+    return `${Math.floor(s / 60)}m ${s % 60}s`
+  }
 
   useEffect(() => {
     // No suscribir si ya está en estado final
@@ -121,7 +133,12 @@ export function SyncProgress({ initialJob, onCompleted, className }: Props) {
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-[#6B7280]">{phaseInfo.label}</span>
-          <span className="text-xs font-medium text-[#1A1A1A]">{job.progressPct}%</span>
+          <div className="flex items-center gap-2">
+            {isActive && (
+              <span className="text-xs text-[#6B7280]">{fmtElapsed(elapsed)}</span>
+            )}
+            <span className="text-xs font-medium text-[#1A1A1A]">{job.progressPct}%</span>
+          </div>
         </div>
       </div>
 
