@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getIngresosAction } from '@/app/actions/inteligencia'
-import type { IngresosData } from '@/app/actions/inteligencia'
+import type { IngresosData, Periodo } from '@/app/actions/inteligencia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -18,18 +19,31 @@ function fmtShort(n: number) {
   return formatMXN(n)
 }
 
+const PERIODOS: { value: Periodo; label: string }[] = [
+  { value: '3m', label: '3 meses' },
+  { value: '6m', label: '6 meses' },
+  { value: '12m', label: '12 meses' },
+  { value: 'ytd', label: 'Este año' },
+]
+
+function periodoLabel(p: Periodo) {
+  return PERIODOS.find(x => x.value === p)?.label ?? p
+}
+
 export default function IngresosPage() {
+  const router = useRouter()
   const [data, setData] = useState<IngresosData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [periodo, setPeriodo] = useState<Periodo>('12m')
 
-  async function load() {
+  async function load(p: Periodo) {
     setLoading(true)
-    const res = await getIngresosAction()
+    const res = await getIngresosAction(p)
     if (!('error' in res)) setData(res)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(periodo) }, [periodo])
 
   const totalFacturas = data?.topClientes.reduce((s, c) => s + c.count, 0) ?? 0
   const ticketProm = data && totalFacturas > 0 ? Math.round(data.totalAnual / totalFacturas) : 0
@@ -38,22 +52,39 @@ export default function IngresosPage() {
     <div>
       <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-[#1A1A1A]">Inteligencia — Ingresos</span>
-        <button onClick={load} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
+        <button onClick={() => load(periodo)} disabled={loading} className="text-[#6B7280] hover:text-[#1A1A1A] disabled:opacity-50">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
       <div className="px-8 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">Ingresos</h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">Facturas emitidas · últimos 12 meses</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1A1A1A]">Ingresos</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">Facturas emitidas · {periodoLabel(periodo)}</p>
+          </div>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            {PERIODOS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setPeriodo(value)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  periodo === value
+                    ? 'bg-white text-[#1A1A1A] shadow-sm'
+                    : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <SyncBanner showWhenEmpty={!data || data.totalAnual === 0} />
 
         <div className="grid grid-cols-3 gap-4">
           {[
-            { title: 'Total ingresos', value: data ? formatMXN(data.totalAnual) : '—', sub: 'Últimos 12 meses', icon: <ArrowUpRight className="h-4 w-4 text-emerald-600" />, bg: 'bg-emerald-50' },
+            { title: 'Total ingresos', value: data ? formatMXN(data.totalAnual) : '—', sub: periodoLabel(periodo), icon: <ArrowUpRight className="h-4 w-4 text-emerald-600" />, bg: 'bg-emerald-50' },
             { title: 'Clientes únicos', value: data ? String(data.topClientes.length) : '—', sub: 'Con al menos 1 factura', icon: <Users className="h-4 w-4 text-[#3CBEDB]" />, bg: 'bg-[#3CBEDB]/10' },
             { title: 'Ticket promedio', value: ticketProm > 0 ? formatMXN(ticketProm) : '—', sub: `${totalFacturas} facturas emitidas`, icon: <FileText className="h-4 w-4 text-violet-500" />, bg: 'bg-violet-50' },
           ].map((kpi) => (
@@ -116,7 +147,11 @@ export default function IngresosPage() {
                   {data.topClientes.map((c) => {
                     const pct = data.totalAnual > 0 ? Math.round((c.total / data.totalAnual) * 100) : 0
                     return (
-                      <TableRow key={c.rfc} className="hover:bg-slate-50/60">
+                      <TableRow
+                        key={c.rfc}
+                        className="hover:bg-slate-50/60 cursor-pointer"
+                        onClick={() => router.push(`/dashboard/clientes/${encodeURIComponent(c.rfc)}?nombre=${encodeURIComponent(c.nombre)}`)}
+                      >
                         <TableCell className="pl-6 font-medium text-[#1A1A1A] max-w-[200px] truncate">{c.nombre}</TableCell>
                         <TableCell className="text-xs font-mono text-[#6B7280]">{c.rfc}</TableCell>
                         <TableCell className="text-right text-[#6B7280]">{c.count}</TableCell>

@@ -18,7 +18,7 @@ async function getCompanyContext() {
     .single()
 
   if (!company) return null
-  return { supabase, user, company }
+  return { supabase, user, company: company as unknown as { id: string; rfc: string } }
 }
 
 function monthKey(dateStr: string): string {
@@ -26,15 +26,17 @@ function monthKey(dateStr: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function last12MonthKeys(): string[] {
+function monthKeysFor(n: number): string[] {
   const keys: string[] = []
   const now = new Date()
-  for (let i = 11; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
   return keys
 }
+
+function last12MonthKeys(): string[] { return monthKeysFor(12) }
 
 function monthLabel(key: string): string {
   const [y, m] = key.split('-')
@@ -46,6 +48,37 @@ function daysSince(dateStr: string): number {
   const now = new Date()
   const issued = new Date(dateStr)
   return Math.floor((now.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+export type Periodo = '3m' | '6m' | '12m' | 'ytd'
+
+function periodoToSince(periodo: Periodo): Date {
+  const now = new Date()
+  if (periodo === '3m') {
+    const d = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    return d
+  }
+  if (periodo === '6m') {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    return d
+  }
+  if (periodo === 'ytd') {
+    return new Date(now.getFullYear(), 0, 1)
+  }
+  // '12m' default
+  const d = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+  return d
+}
+
+function periodoToMonthKeys(periodo: Periodo): string[] {
+  if (periodo === '3m') return monthKeysFor(3)
+  if (periodo === '6m') return monthKeysFor(6)
+  if (periodo === 'ytd') {
+    const now = new Date()
+    const count = now.getMonth() + 1 // months elapsed this year
+    return monthKeysFor(count)
+  }
+  return monthKeysFor(12)
 }
 
 // ── Tipos exportados ───────────────────────────────────────────────────────────
@@ -100,28 +133,30 @@ export interface ResumenData {
 
 // ── Ingresos ───────────────────────────────────────────────────────────────────
 
-export async function getIngresosAction(): Promise<IngresosData | { error: string }> {
+export async function getIngresosAction(periodo: Periodo = '12m'): Promise<IngresosData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const since = new Date()
-  since.setMonth(since.getMonth() - 11)
-  since.setDate(1)
+  const since = periodoToSince(periodo)
+  const keys = periodoToMonthKeys(periodo)
 
-  const { data: rows, error } = await supabase
-    .from('cfdis')
-    .select('cfdi_uuid, total, issued_at, receiver_rfc, receiver_name')
+  const { data: cfdis, error } = await supabase
+    .from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
     .eq('company_id', company.id)
-    .eq('issuer_rfc', company.rfc)
-    .eq('cfdi_type', 'I')
+    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
     .gte('issued_at', since.toISOString())
     .order('issued_at', { ascending: false })
 
   if (error) return { error: error.message }
-  if (!rows || rows.length === 0) {
-    const keys = last12MonthKeys()
+
+  const rows = (cfdis ?? []) as unknown as Array<{
+    id: string; cfdi_uuid: string; total: number | null; issued_at: string; receiver_rfc: string | null
+  }>
+
+  if (rows.length === 0) {
     return {
       meses: keys.map((k) => ({ mes: k, label: monthLabel(k), total: 0 })),
       topClientes: [],
@@ -130,7 +165,17 @@ export async function getIngresosAction(): Promise<IngresosData | { error: strin
     }
   }
 
-  const keys = last12MonthKeys()
+  // Fetch receiver names
+  const receiverRfcs = Array.from(new Set(rows.map(r => r.receiver_rfc).filter(Boolean))) as string[]
+  const { data: taxpayers } = receiverRfcs.length > 0
+    ? await supabase.from('sat_taxpayers').select('rfc, razon_social').in('rfc', receiverRfcs)
+    : { data: [] }
+
+  const nameByRfc = new Map<string, string>()
+  for (const t of (taxpayers ?? []) as unknown as Array<{ rfc: string; razon_social: string | null }>) {
+    if (t.razon_social) nameByRfc.set(t.rfc, t.razon_social)
+  }
+
   const byMonth: Record<string, number> = {}
   keys.forEach((k) => (byMonth[k] = 0))
 
@@ -143,7 +188,8 @@ export async function getIngresosAction(): Promise<IngresosData | { error: strin
     totalAnual += r.total ?? 0
 
     const rfc = r.receiver_rfc?.toUpperCase() ?? 'DESCONOCIDO'
-    if (!byCliente[rfc]) byCliente[rfc] = { nombre: r.receiver_name ?? rfc, total: 0, count: 0 }
+    const nombre = nameByRfc.get(rfc) ?? rfc
+    if (!byCliente[rfc]) byCliente[rfc] = { nombre, total: 0, count: 0 }
     byCliente[rfc].total += r.total ?? 0
     byCliente[rfc].count += 1
   }
@@ -166,28 +212,30 @@ export async function getIngresosAction(): Promise<IngresosData | { error: strin
 
 // ── Gastos ─────────────────────────────────────────────────────────────────────
 
-export async function getGastosAction(): Promise<GastosData | { error: string }> {
+export async function getGastosAction(periodo: Periodo = '12m'): Promise<GastosData | { error: string }> {
   const ctx = await getCompanyContext()
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const since = new Date()
-  since.setMonth(since.getMonth() - 11)
-  since.setDate(1)
+  const since = periodoToSince(periodo)
+  const keys = periodoToMonthKeys(periodo)
 
-  const { data: rows, error } = await supabase
-    .from('cfdis')
-    .select('cfdi_uuid, total, issued_at, issuer_rfc, issuer_name')
+  const { data: cfdis, error } = await supabase
+    .from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
     .eq('company_id', company.id)
-    .eq('receiver_rfc', company.rfc)
-    .eq('cfdi_type', 'I')
+    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
     .gte('issued_at', since.toISOString())
     .order('issued_at', { ascending: false })
 
   if (error) return { error: error.message }
-  if (!rows || rows.length === 0) {
-    const keys = last12MonthKeys()
+
+  const rows = (cfdis ?? []) as unknown as Array<{
+    id: string; cfdi_uuid: string; total: number | null; issued_at: string; issuer_rfc: string | null
+  }>
+
+  if (rows.length === 0) {
     return {
       meses: keys.map((k) => ({ mes: k, label: monthLabel(k), total: 0 })),
       topProveedores: [],
@@ -196,7 +244,17 @@ export async function getGastosAction(): Promise<GastosData | { error: string }>
     }
   }
 
-  const keys = last12MonthKeys()
+  // Fetch issuer names
+  const issuerRfcs = Array.from(new Set(rows.map(r => r.issuer_rfc).filter(Boolean))) as string[]
+  const { data: taxpayers } = issuerRfcs.length > 0
+    ? await supabase.from('sat_taxpayers').select('rfc, razon_social').in('rfc', issuerRfcs)
+    : { data: [] }
+
+  const nameByRfc = new Map<string, string>()
+  for (const t of (taxpayers ?? []) as unknown as Array<{ rfc: string; razon_social: string | null }>) {
+    if (t.razon_social) nameByRfc.set(t.rfc, t.razon_social)
+  }
+
   const byMonth: Record<string, number> = {}
   keys.forEach((k) => (byMonth[k] = 0))
 
@@ -209,7 +267,8 @@ export async function getGastosAction(): Promise<GastosData | { error: string }>
     totalAnual += r.total ?? 0
 
     const rfc = r.issuer_rfc?.toUpperCase() ?? 'DESCONOCIDO'
-    if (!byProveedor[rfc]) byProveedor[rfc] = { nombre: r.issuer_name ?? rfc, total: 0, count: 0 }
+    const nombre = nameByRfc.get(rfc) ?? rfc
+    if (!byProveedor[rfc]) byProveedor[rfc] = { nombre, total: 0, count: 0 }
     byProveedor[rfc].total += r.total ?? 0
     byProveedor[rfc].count += 1
   }
@@ -237,27 +296,60 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const { data: rows, error } = await supabase
-    .from('cfdis')
-    .select('cfdi_uuid, total, due_amount, issued_at, receiver_rfc, receiver_name')
+  const { data: cfdis, error } = await supabase
+    .from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, receiver_rfc')
     .eq('company_id', company.id)
-    .eq('issuer_rfc', company.rfc)
-    .eq('cfdi_type', 'I')
+    .eq('issuer_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
-    .gt('due_amount', 0)
     .order('issued_at', { ascending: true })
 
   if (error) return { error: error.message }
 
-  const facturas: FacturaPendiente[] = (rows ?? []).map((r) => ({
-    uuid: r.cfdi_uuid,
-    contraparte: r.receiver_name ?? r.receiver_rfc ?? '—',
-    contraparteRfc: r.receiver_rfc ?? '',
-    monto: r.total ?? 0,
-    dueAmount: r.due_amount ?? 0,
-    issuedAt: r.issued_at,
-    diasVencida: daysSince(r.issued_at),
-  }))
+  const rows = (cfdis ?? []) as unknown as Array<{
+    id: string; cfdi_uuid: string; total: number | null; issued_at: string; receiver_rfc: string | null
+  }>
+
+  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorCobrar: 0 }
+
+  // Fetch payment states — only care about due_amount > 0
+  const cfdiIds = rows.map(r => r.id)
+  const { data: paymentStates } = await supabase
+    .from('sat_cfdi_payment_state')
+    .select('cfdi_id, due_amount')
+    .in('cfdi_id', cfdiIds)
+    .gt('due_amount', 0)
+
+  const dueById = new Map<string, number>()
+  for (const ps of (paymentStates ?? []) as unknown as Array<{ cfdi_id: string; due_amount: number }>) {
+    dueById.set(ps.cfdi_id, ps.due_amount)
+  }
+
+  // Fetch receiver names
+  const receiverRfcs = Array.from(new Set(rows.map(r => r.receiver_rfc).filter(Boolean))) as string[]
+  const { data: taxpayers } = receiverRfcs.length > 0
+    ? await supabase.from('sat_taxpayers').select('rfc, razon_social').in('rfc', receiverRfcs)
+    : { data: [] }
+
+  const nameByRfc = new Map<string, string>()
+  for (const t of (taxpayers ?? []) as unknown as Array<{ rfc: string; razon_social: string | null }>) {
+    if (t.razon_social) nameByRfc.set(t.rfc, t.razon_social)
+  }
+
+  const facturas: FacturaPendiente[] = rows
+    .filter(r => dueById.has(r.id))
+    .map((r) => {
+      const rfc = r.receiver_rfc?.toUpperCase() ?? ''
+      return {
+        uuid: r.cfdi_uuid,
+        contraparte: nameByRfc.get(rfc) ?? rfc || '—',
+        contraparteRfc: rfc,
+        monto: r.total ?? 0,
+        dueAmount: dueById.get(r.id) ?? 0,
+        issuedAt: r.issued_at,
+        diasVencida: daysSince(r.issued_at),
+      }
+    })
 
   const buckets = calcBuckets(facturas)
   const totalPorCobrar = facturas.reduce((s, f) => s + f.dueAmount, 0)
@@ -272,27 +364,60 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  const { data: rows, error } = await supabase
-    .from('cfdis')
-    .select('cfdi_uuid, total, due_amount, issued_at, issuer_rfc, issuer_name')
+  const { data: cfdis, error } = await supabase
+    .from('sat_cfdis')
+    .select('id, cfdi_uuid, total, issued_at, issuer_rfc')
     .eq('company_id', company.id)
-    .eq('receiver_rfc', company.rfc)
-    .eq('cfdi_type', 'I')
+    .eq('receiver_rfc', company.rfc.toUpperCase().trim())
     .eq('cfdi_status', 'vigente')
-    .gt('due_amount', 0)
     .order('issued_at', { ascending: true })
 
   if (error) return { error: error.message }
 
-  const facturas: FacturaPendiente[] = (rows ?? []).map((r) => ({
-    uuid: r.cfdi_uuid,
-    contraparte: r.issuer_name ?? r.issuer_rfc ?? '—',
-    contraparteRfc: r.issuer_rfc ?? '',
-    monto: r.total ?? 0,
-    dueAmount: r.due_amount ?? 0,
-    issuedAt: r.issued_at,
-    diasVencida: daysSince(r.issued_at),
-  }))
+  const rows = (cfdis ?? []) as unknown as Array<{
+    id: string; cfdi_uuid: string; total: number | null; issued_at: string; issuer_rfc: string | null
+  }>
+
+  if (rows.length === 0) return { buckets: calcBuckets([]), facturas: [], totalPorPagar: 0 }
+
+  // Fetch payment states — only care about due_amount > 0
+  const cfdiIds = rows.map(r => r.id)
+  const { data: paymentStates } = await supabase
+    .from('sat_cfdi_payment_state')
+    .select('cfdi_id, due_amount')
+    .in('cfdi_id', cfdiIds)
+    .gt('due_amount', 0)
+
+  const dueById = new Map<string, number>()
+  for (const ps of (paymentStates ?? []) as unknown as Array<{ cfdi_id: string; due_amount: number }>) {
+    dueById.set(ps.cfdi_id, ps.due_amount)
+  }
+
+  // Fetch issuer names
+  const issuerRfcs = Array.from(new Set(rows.map(r => r.issuer_rfc).filter(Boolean))) as string[]
+  const { data: taxpayers } = issuerRfcs.length > 0
+    ? await supabase.from('sat_taxpayers').select('rfc, razon_social').in('rfc', issuerRfcs)
+    : { data: [] }
+
+  const nameByRfc = new Map<string, string>()
+  for (const t of (taxpayers ?? []) as unknown as Array<{ rfc: string; razon_social: string | null }>) {
+    if (t.razon_social) nameByRfc.set(t.rfc, t.razon_social)
+  }
+
+  const facturas: FacturaPendiente[] = rows
+    .filter(r => dueById.has(r.id))
+    .map((r) => {
+      const rfc = r.issuer_rfc?.toUpperCase() ?? ''
+      return {
+        uuid: r.cfdi_uuid,
+        contraparte: nameByRfc.get(rfc) ?? rfc || '—',
+        contraparteRfc: rfc,
+        monto: r.total ?? 0,
+        dueAmount: dueById.get(r.id) ?? 0,
+        issuedAt: r.issued_at,
+        diasVencida: daysSince(r.issued_at),
+      }
+    })
 
   const buckets = calcBuckets(facturas)
   const totalPorPagar = facturas.reduce((s, f) => s + f.dueAmount, 0)
@@ -307,9 +432,8 @@ export async function getResumenAction(): Promise<ResumenData | { error: string 
   if (!ctx) return { error: 'No autenticado' }
   const { supabase, company } = ctx
 
-  // Verificar si hay CFDIs sincronizados
   const { count } = await supabase
-    .from('cfdis')
+    .from('sat_cfdis')
     .select('id', { count: 'exact', head: true })
     .eq('company_id', company.id)
 
@@ -319,7 +443,7 @@ export async function getResumenAction(): Promise<ResumenData | { error: string 
       gastosMesActual: 0,
       totalPorCobrar: 0,
       totalPorPagar: 0,
-      meses: last12MonthKeys().map((k) => ({ mes: k, label: monthLabel(k), ingresos: 0, gastos: 0 })),
+      meses: monthKeysFor(6).map((k) => ({ mes: k, label: monthLabel(k), ingresos: 0, gastos: 0 })),
       synced: false,
     }
   }
@@ -328,43 +452,56 @@ export async function getResumenAction(): Promise<ResumenData | { error: string 
   since.setMonth(since.getMonth() - 5)
   since.setDate(1)
 
-  const { data: rows } = await supabase
-    .from('cfdis')
-    .select('total, due_amount, issued_at, issuer_rfc, receiver_rfc, cfdi_type, cfdi_status')
-    .eq('company_id', company.id)
-    .eq('cfdi_type', 'I')
-    .eq('cfdi_status', 'vigente')
-    .gte('issued_at', since.toISOString())
+  const keys = monthKeysFor(6)
 
-  const keys = (() => {
-    const ks: string[] = []
-    const now = new Date()
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      ks.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-    }
-    return ks
-  })()
+  // Fetch emitidos + recibidos in parallel
+  const [emitidosRes, recibidosRes] = await Promise.all([
+    supabase.from('sat_cfdis')
+      .select('id, total, issued_at')
+      .eq('company_id', company.id)
+      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', since.toISOString()),
+    supabase.from('sat_cfdis')
+      .select('id, total, issued_at')
+      .eq('company_id', company.id)
+      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
+      .gte('issued_at', since.toISOString()),
+  ])
+
+  const emitidos = (emitidosRes.data ?? []) as unknown as Array<{ id: string; total: number | null; issued_at: string }>
+  const recibidos = (recibidosRes.data ?? []) as unknown as Array<{ id: string; total: number | null; issued_at: string }>
+
+  // Fetch payment states for CxC and CxP totals
+  const emitidosIds = emitidos.map(r => r.id)
+  const recibidosIds = recibidos.map(r => r.id)
+
+  const [cxcRes, cxpRes] = await Promise.all([
+    emitidosIds.length > 0
+      ? supabase.from('sat_cfdi_payment_state').select('cfdi_id, due_amount').in('cfdi_id', emitidosIds).gt('due_amount', 0)
+      : Promise.resolve({ data: [] }),
+    recibidosIds.length > 0
+      ? supabase.from('sat_cfdi_payment_state').select('cfdi_id, due_amount').in('cfdi_id', recibidosIds).gt('due_amount', 0)
+      : Promise.resolve({ data: [] }),
+  ])
 
   const byMonth: Record<string, { ingresos: number; gastos: number }> = {}
   keys.forEach((k) => (byMonth[k] = { ingresos: 0, gastos: 0 }))
 
-  let totalPorCobrar = 0
-  let totalPorPagar = 0
-
-  for (const r of rows ?? []) {
+  for (const r of emitidos) {
     const mk = monthKey(r.issued_at)
-    const isEmitido = r.issuer_rfc?.toUpperCase() === company.rfc.toUpperCase()
-    const isRecibido = r.receiver_rfc?.toUpperCase() === company.rfc.toUpperCase()
-
-    if (byMonth[mk]) {
-      if (isEmitido) byMonth[mk].ingresos += r.total ?? 0
-      if (isRecibido) byMonth[mk].gastos += r.total ?? 0
-    }
-
-    if (isEmitido && (r.due_amount ?? 0) > 0) totalPorCobrar += r.due_amount ?? 0
-    if (isRecibido && (r.due_amount ?? 0) > 0) totalPorPagar += r.due_amount ?? 0
+    if (byMonth[mk]) byMonth[mk].ingresos += r.total ?? 0
   }
+  for (const r of recibidos) {
+    const mk = monthKey(r.issued_at)
+    if (byMonth[mk]) byMonth[mk].gastos += r.total ?? 0
+  }
+
+  const totalPorCobrar = ((cxcRes.data ?? []) as unknown as Array<{ due_amount: number }>)
+    .reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const totalPorPagar = ((cxpRes.data ?? []) as unknown as Array<{ due_amount: number }>)
+    .reduce((s, r) => s + (r.due_amount ?? 0), 0)
 
   const currentKey = monthKey(new Date().toISOString())
   const ingresosMesActual = byMonth[currentKey]?.ingresos ?? 0
@@ -410,7 +547,7 @@ export async function getAnalisisAction(): Promise<AnalisisData | { error: strin
   const { supabase, company } = ctx
 
   const { count } = await supabase
-    .from('cfdis')
+    .from('sat_cfdis')
     .select('id', { count: 'exact', head: true })
     .eq('company_id', company.id)
 
@@ -429,31 +566,71 @@ export async function getAnalisisAction(): Promise<AnalisisData | { error: strin
   since12m.setMonth(since12m.getMonth() - 11)
   since12m.setDate(1)
 
-  const [emitidosRes, recibidosRes, cxcRes, cxpRes] = await Promise.all([
-    supabase.from('cfdis')
-      .select('total, issued_at, receiver_rfc, receiver_name')
-      .eq('company_id', company.id).eq('issuer_rfc', company.rfc)
-      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+  // Fetch emitidos + recibidos in parallel
+  const [emitidosRes, recibidosRes] = await Promise.all([
+    supabase.from('sat_cfdis')
+      .select('id, total, issued_at, receiver_rfc')
+      .eq('company_id', company.id)
+      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
       .gte('issued_at', since12m.toISOString()),
-    supabase.from('cfdis')
-      .select('total, issued_at')
-      .eq('company_id', company.id).eq('receiver_rfc', company.rfc)
-      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente')
+    supabase.from('sat_cfdis')
+      .select('id, total, issued_at')
+      .eq('company_id', company.id)
+      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente')
       .gte('issued_at', since12m.toISOString()),
-    supabase.from('cfdis')
-      .select('due_amount, issued_at')
-      .eq('company_id', company.id).eq('issuer_rfc', company.rfc)
-      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
-    supabase.from('cfdis')
-      .select('due_amount, issued_at')
-      .eq('company_id', company.id).eq('receiver_rfc', company.rfc)
-      .eq('cfdi_type', 'I').eq('cfdi_status', 'vigente').gt('due_amount', 0),
   ])
 
-  const emitidos = emitidosRes.data ?? []
-  const recibidos = recibidosRes.data ?? []
-  const cxcRows = cxcRes.data ?? []
-  const cxpRows = cxpRes.data ?? []
+  const emitidos = (emitidosRes.data ?? []) as unknown as Array<{
+    id: string; total: number | null; issued_at: string; receiver_rfc: string | null
+  }>
+  const recibidos = (recibidosRes.data ?? []) as unknown as Array<{
+    id: string; total: number | null; issued_at: string
+  }>
+
+  // Fetch receiver names for emitidos
+  const receiverRfcs = Array.from(new Set(emitidos.map(r => r.receiver_rfc).filter(Boolean))) as string[]
+  const { data: taxpayers } = receiverRfcs.length > 0
+    ? await supabase.from('sat_taxpayers').select('rfc, razon_social').in('rfc', receiverRfcs)
+    : { data: [] }
+
+  const nameByRfc = new Map<string, string>()
+  for (const t of (taxpayers ?? []) as unknown as Array<{ rfc: string; razon_social: string | null }>) {
+    if (t.razon_social) nameByRfc.set(t.rfc, t.razon_social)
+  }
+
+  // Fetch payment states for all CxC and CxP (no date filter — all pending)
+  const [allCxcRes, allCxpRes] = await Promise.all([
+    supabase.from('sat_cfdis')
+      .select('id, issued_at')
+      .eq('company_id', company.id)
+      .eq('issuer_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente'),
+    supabase.from('sat_cfdis')
+      .select('id, issued_at')
+      .eq('company_id', company.id)
+      .eq('receiver_rfc', company.rfc.toUpperCase().trim())
+      .eq('cfdi_status', 'vigente'),
+  ])
+
+  const allEmitidosIds = ((allCxcRes.data ?? []) as unknown as Array<{ id: string; issued_at: string }>).map(r => r.id)
+  const allRecibidosIds = ((allCxpRes.data ?? []) as unknown as Array<{ id: string; issued_at: string }>).map(r => r.id)
+  const allEmitidosIssuedAt = new Map<string, string>(
+    ((allCxcRes.data ?? []) as unknown as Array<{ id: string; issued_at: string }>).map(r => [r.id, r.issued_at])
+  )
+
+  const [cxcPsRes, cxpPsRes] = await Promise.all([
+    allEmitidosIds.length > 0
+      ? supabase.from('sat_cfdi_payment_state').select('cfdi_id, due_amount').in('cfdi_id', allEmitidosIds).gt('due_amount', 0)
+      : Promise.resolve({ data: [] }),
+    allRecibidosIds.length > 0
+      ? supabase.from('sat_cfdi_payment_state').select('cfdi_id, due_amount').in('cfdi_id', allRecibidosIds).gt('due_amount', 0)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const cxcRows = (cxcPsRes.data ?? []) as unknown as Array<{ cfdi_id: string; due_amount: number }>
+  const cxpRows = (cxpPsRes.data ?? []) as unknown as Array<{ cfdi_id: string; due_amount: number }>
 
   const now = new Date()
   const cutoff90 = new Date(now.getFullYear(), now.getMonth() - 2, 1)
@@ -470,7 +647,7 @@ export async function getAnalisisAction(): Promise<AnalisisData | { error: strin
     if (new Date(r.issued_at) >= cutoff90) ingresos90 += t
     if (monthKey(r.issued_at) === currentKey) ingresosMes += t
     const rfc = r.receiver_rfc?.toUpperCase() ?? 'DESCONOCIDO'
-    if (!byCliente[rfc]) byCliente[rfc] = { nombre: r.receiver_name ?? rfc, total: 0 }
+    if (!byCliente[rfc]) byCliente[rfc] = { nombre: nameByRfc.get(rfc) ?? rfc, total: 0 }
     byCliente[rfc].total += t
   }
 
@@ -485,9 +662,15 @@ export async function getAnalisisAction(): Promise<AnalisisData | { error: strin
   const totalPorCobrar = cxcRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
   const totalPorPagar = cxpRows.reduce((s, r) => s + (r.due_amount ?? 0), 0)
 
-  const entradas30 = cxcRows.filter(r => daysSince(r.issued_at) <= 30).reduce((s, r) => s + (r.due_amount ?? 0), 0)
-  const entradas60 = cxcRows.filter(r => daysSince(r.issued_at) <= 60).reduce((s, r) => s + (r.due_amount ?? 0), 0)
-  const entradas90 = cxcRows.filter(r => daysSince(r.issued_at) <= 90).reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const entradas30 = cxcRows
+    .filter(r => daysSince(allEmitidosIssuedAt.get(r.cfdi_id) ?? '') <= 30)
+    .reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const entradas60 = cxcRows
+    .filter(r => daysSince(allEmitidosIssuedAt.get(r.cfdi_id) ?? '') <= 60)
+    .reduce((s, r) => s + (r.due_amount ?? 0), 0)
+  const entradas90 = cxcRows
+    .filter(r => daysSince(allEmitidosIssuedAt.get(r.cfdi_id) ?? '') <= 90)
+    .reduce((s, r) => s + (r.due_amount ?? 0), 0)
 
   const dso = ingresos90 > 0 ? Math.round((totalPorCobrar / ingresos90) * 90) : 0
   const dpo = gastos90 > 0 ? Math.round((totalPorPagar / gastos90) * 90) : 0
