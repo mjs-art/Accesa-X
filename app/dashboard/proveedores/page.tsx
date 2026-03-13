@@ -31,16 +31,13 @@ export default function ProveedoresPage() {
   const [totalPorPagar, setTotalPorPagar] = useState(0)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [debugError, setDebugError] = useState<string | null>(null)
 
   useEffect(() => {
     // Sync CFDIs en segundo plano — no bloqueante
     syncCfdisAction().catch(() => {})
 
     getProveedoresAction().then((res) => {
-      if ('error' in res) {
-        setDebugError(res.error)
-      } else {
+      if (!('error' in res)) {
         setProveedores(res.proveedores)
         setTotalGasto(res.totalGasto)
         setTotalPorPagar(res.totalPorPagar)
@@ -132,13 +129,9 @@ export default function ProveedoresPage() {
               <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                 <InboxIcon className="h-10 w-10 text-slate-300 mb-3" />
                 <p className="text-sm font-medium text-[#1A1A1A]">Sin proveedores aún</p>
-                {debugError ? (
-                  <p className="text-xs text-red-500 mt-1 max-w-xs font-mono">{debugError}</p>
-                ) : (
-                  <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
-                    Los proveedores aparecerán aquí una vez que Syntage extraiga tus CFDIs recibidos del SAT.
-                  </p>
-                )}
+                <p className="text-xs text-[#6B7280] mt-1 max-w-xs">
+                  Los proveedores aparecerán aquí una vez que Syntage extraiga tus CFDIs recibidos del SAT.
+                </p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
