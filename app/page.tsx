@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Loader2 } from 'lucide-react'
 
-type Mode = 'login' | 'register'
+type Mode = 'login' | 'register' | 'forgot'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
@@ -44,6 +44,21 @@ export default function AuthPage() {
       setError(error.message)
       setGoogleLoading(false)
     }
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess('Revisa tu correo — te enviamos un enlace para restablecer tu contraseña.')
+    }
+    setLoading(false)
   }
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -96,6 +111,7 @@ export default function AuthPage() {
   }
 
   const isRegister = mode === 'register'
+  const isForgot = mode === 'forgot'
 
   return (
     <main className="min-h-screen flex" style={{ background: 'linear-gradient(180deg, #3CBEDB 0%, #2A2928 100%)' }}>
@@ -130,34 +146,38 @@ export default function AuthPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-5">
 
             <h1 className="text-lg font-semibold text-[#1A1A1A] text-center">
-              {isRegister ? 'Crear cuenta' : 'Bienvenido'}
+              {isRegister ? 'Crear cuenta' : isForgot ? 'Recuperar contraseña' : 'Bienvenido'}
             </h1>
 
-            {/* Google */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11 font-medium border-slate-300 hover:bg-slate-50"
-              onClick={handleGoogleLogin}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <GoogleIcon className="mr-2 h-4 w-4" />
-              )}
-              Continuar con Google
-            </Button>
+            {!isForgot && (
+              <>
+                {/* Google */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 font-medium border-slate-300 hover:bg-slate-50"
+                  onClick={handleGoogleLogin}
+                  disabled={googleLoading || loading}
+                >
+                  {googleLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <GoogleIcon className="mr-2 h-4 w-4" />
+                  )}
+                  Continuar con Google
+                </Button>
 
-            {/* Separador */}
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-xs text-[#6B7280] font-medium">o</span>
-              <Separator className="flex-1" />
-            </div>
+                {/* Separador */}
+                <div className="flex items-center gap-3">
+                  <Separator className="flex-1" />
+                  <span className="text-xs text-[#6B7280] font-medium">o</span>
+                  <Separator className="flex-1" />
+                </div>
+              </>
+            )}
 
             {/* Formulario */}
-            <form onSubmit={isRegister ? handleRegister : handleEmailLogin} className="space-y-4">
+            <form onSubmit={isForgot ? handleForgotPassword : isRegister ? handleRegister : handleEmailLogin} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-sm text-[#374151] font-medium">
                   Correo electrónico
@@ -174,21 +194,34 @@ export default function AuthPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm text-[#374151] font-medium">
-                  Contraseña
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading || googleLoading}
-                  className="h-11"
-                />
-              </div>
+              {!isForgot && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm text-[#374151] font-medium">
+                      Contraseña
+                    </Label>
+                    {!isRegister && (
+                      <button
+                        type="button"
+                        onClick={() => switchMode('forgot')}
+                        className="text-xs text-[#3CBEDB] hover:underline"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading || googleLoading}
+                    className="h-11"
+                  />
+                </div>
+              )}
 
               {isRegister && (
                 <div className="space-y-1.5">
@@ -227,6 +260,8 @@ export default function AuthPage() {
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : isForgot ? (
+                  'ENVIAR ENLACE'
                 ) : isRegister ? (
                   'CREAR CUENTA'
                 ) : (
@@ -236,7 +271,13 @@ export default function AuthPage() {
             </form>
 
             <p className="text-center text-sm text-[#6B7280]">
-              {isRegister ? (
+              {isForgot ? (
+                <>
+                  <button type="button" onClick={() => switchMode('login')} className="text-[#3CBEDB] font-medium hover:underline">
+                    Volver al inicio de sesión
+                  </button>
+                </>
+              ) : isRegister ? (
                 <>
                   ¿Ya tienes cuenta?{' '}
                   <button type="button" onClick={() => switchMode('login')} className="text-[#3CBEDB] font-medium hover:underline">
