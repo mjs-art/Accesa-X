@@ -368,7 +368,7 @@ export async function getCxcAction(): Promise<CxcData | { error: string }> {
       const rfc = r.receiver_rfc?.toUpperCase() ?? ''
       return {
         uuid: r.cfdi_uuid,
-        contraparte: nameByRfc.get(rfc) ?? rfc || '—',
+        contraparte: (nameByRfc.get(rfc) ?? rfc) || '—',
         contraparteRfc: rfc,
         monto: r.total ?? 0,
         dueAmount: dueById.get(r.id) ?? 0,
@@ -442,7 +442,7 @@ export async function getCxpAction(): Promise<CxpData | { error: string }> {
       const rfc = r.issuer_rfc?.toUpperCase() ?? ''
       return {
         uuid: r.cfdi_uuid,
-        contraparte: nameByRfc.get(rfc) ?? rfc || '—',
+        contraparte: (nameByRfc.get(rfc) ?? rfc) || '—',
         contraparteRfc: rfc,
         monto: r.total ?? 0,
         dueAmount: dueById.get(r.id) ?? 0,
