@@ -152,10 +152,109 @@ export async function getProveedorDetailAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
-  const { data, error } = await supabase.functions.invoke('get-proveedor-data', {
-    body: { proveedorRfc },
+  const { data: company, error: companyError } = await supabase
+    .from('companies')
+    .select('id, rfc')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (companyError || !company) return { error: 'Empresa no encontrada' }
+  const comp = company as unknown as { id: string; rfc: string }
+
+  // Facturas recibidas de este proveedor
+  const { data: cfdis, error: cfdiError } = await supabase
+    .from('sat_cfdis')
+    .select('id, cfdi_uuid, total, subtotal, issued_at, cfdi_status')
+    .eq('company_id', comp.id)
+    .eq('receiver_rfc', comp.rfc.toUpperCase().trim())
+    .eq('issuer_rfc', proveedorRfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+    .order('issued_at', { ascending: false })
+
+  if (cfdiError) return { error: cfdiError.message }
+
+  const cfdiRows = (cfdis ?? []) as unknown as Array<{
+    id: string; cfdi_uuid: string; total: number | null
+    subtotal: number | null; issued_at: string; cfdi_status: string
+  }>
+
+  // Payment state
+  const cfdiIds = cfdiRows.map(r => r.id)
+  const { data: paymentStates } = cfdiIds.length > 0
+    ? await supabase.from('sat_cfdi_payment_state').select('cfdi_id, paid_amount, due_amount, fully_paid_at').in('cfdi_id', cfdiIds)
+    : { data: [] }
+
+  const psMap = new Map<string, { paid_amount: number | null; due_amount: number | null; fully_paid_at: string | null }>()
+  for (const ps of (paymentStates ?? []) as unknown as Array<{ cfdi_id: string; paid_amount: number | null; due_amount: number | null; fully_paid_at: string | null }>) {
+    psMap.set(ps.cfdi_id, ps)
+  }
+
+  // First concept per CFDI
+  const { data: concepts } = cfdiIds.length > 0
+    ? await supabase.from('sat_cfdi_concepts').select('cfdi_id, descripcion, clav_prod_serv, linea').in('cfdi_id', cfdiIds).eq('linea', 1)
+    : { data: [] }
+
+  const conceptMap = new Map<string, { descripcion: string; clav_prod_serv: string | null }>()
+  for (const c of (concepts ?? []) as unknown as Array<{ cfdi_id: string; descripcion: string; clav_prod_serv: string | null }>) {
+    conceptMap.set(c.cfdi_id, c)
+  }
+
+  // Provider name
+  const { data: taxpayer } = await supabase
+    .from('sat_taxpayers')
+    .select('razon_social')
+    .eq('rfc', proveedorRfc.toUpperCase().trim())
+    .single()
+  const proveedorNombre = (taxpayer as unknown as { razon_social: string | null } | null)?.razon_social ?? proveedorRfc
+
+  const invoices: FacturaProveedor[] = cfdiRows.map(r => {
+    const ps = psMap.get(r.id)
+    const concept = conceptMap.get(r.id)
+    return {
+      uuid: r.cfdi_uuid,
+      total: r.total ?? 0,
+      subtotal: r.subtotal ?? 0,
+      paidAmount: ps?.paid_amount ?? null,
+      dueAmount: ps?.due_amount ?? null,
+      fullyPaidAt: ps?.fully_paid_at ?? null,
+      issuedAt: r.issued_at,
+      status: r.cfdi_status,
+      descripcion: concept?.descripcion ?? '',
+      claveProdServ: concept?.clav_prod_serv ?? null,
+    }
   })
 
-  if (error) return { error: 'No se pudieron obtener los datos del proveedor.' }
-  return data as ProveedorDetalleResult
+  const totalComprado = invoices.reduce((s, i) => s + i.total, 0)
+  const porPagar = invoices.reduce((s, i) => s + (i.dueAmount ?? 0), 0)
+
+  // Total gasto empresa (para porcentaje)
+  const { data: allRecibidos } = await supabase
+    .from('sat_cfdis')
+    .select('total')
+    .eq('company_id', comp.id)
+    .eq('receiver_rfc', comp.rfc.toUpperCase().trim())
+    .eq('cfdi_status', 'vigente')
+
+  const totalGastoEmpresa = ((allRecibidos ?? []) as unknown as Array<{ total: number | null }>)
+    .reduce((s, r) => s + (r.total ?? 0), 0)
+
+  const porcentajeDelTotal = totalGastoEmpresa > 0
+    ? Math.round((totalComprado / totalGastoEmpresa) * 1000) / 10
+    : 0
+
+  return {
+    proveedor: {
+      rfc: proveedorRfc.toUpperCase(),
+      nombre: proveedorNombre,
+      totalComprado,
+      numFacturas: invoices.length,
+      porPagar,
+      ultimaFactura: cfdiRows[0]?.issued_at ?? null,
+      porcentajeDelTotal,
+    },
+    invoices,
+    totalGastoEmpresa,
+  }
 }
