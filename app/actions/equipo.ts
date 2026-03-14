@@ -100,7 +100,7 @@ export async function inviteMemberAction(email: string, role: MemberRole): Promi
   try {
     const adminClient = createAdminClient()
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/auth/callback?next=/dashboard`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/auth/callback?next=/dashboard`,
     })
     if (inviteError) {
       // If user already exists Supabase returns an error but the invite row is already created
