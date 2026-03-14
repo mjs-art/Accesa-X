@@ -135,6 +135,20 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (!company) {
+      // No own company — check if user is an active team member of another company
+      const { data: membership } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (membership) {
+        // Team member: allow through to dashboard
+        return supabaseResponse
+      }
+
       return NextResponse.redirect(new URL('/onboarding/empresa', request.url))
     }
 

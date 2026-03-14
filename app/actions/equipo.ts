@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEffectiveCompanyId } from '@/lib/get-company-context'
 
 export type MemberRole = 'admin' | 'viewer'
 export type MemberStatus = 'pending' | 'active'
@@ -22,12 +23,7 @@ export interface TeamMember {
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 async function getCurrentCompanyId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data } = await supabase
-    .from('companies')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
-  return (data as { id: string } | null)?.id ?? null
+  return getEffectiveCompanyId(supabase, userId)
 }
 
 // ─── actions ────────────────────────────────────────────────────────────────

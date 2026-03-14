@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getEffectiveCompany } from '@/lib/get-company-context'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -9,16 +10,9 @@ async function getCompanyContext() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: company } = await supabase
-    .from('companies')
-    .select('id, rfc')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
+  const company = await getEffectiveCompany(supabase, user.id)
   if (!company) return null
-  return { supabase, user, company: company as unknown as { id: string; rfc: string } }
+  return { supabase, user, company }
 }
 
 function monthKey(dateStr: string): string {

@@ -57,6 +57,18 @@ export async function GET(request: Request) {
         .single()
 
       if (!company) {
+        // Check if this user is now an active team member (just linked above)
+        const { data: membership } = await supabase
+          .from('company_members')
+          .select('company_id')
+          .eq('user_id', data.user.id)
+          .eq('status', 'active')
+          .limit(1)
+          .single()
+
+        if (membership) {
+          return NextResponse.redirect(`${origin}/dashboard`)
+        }
         return NextResponse.redirect(`${origin}/onboarding/empresa`)
       }
 
