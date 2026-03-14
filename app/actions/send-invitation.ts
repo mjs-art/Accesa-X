@@ -1,7 +1,7 @@
 'use server'
 
-import { createClient as createServerClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { SupabaseCompanyRepository } from '@/features/onboarding/repositories/company.repository.impl'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import type { InvitationType } from '@/features/onboarding/types/onboarding.types'
@@ -26,10 +26,7 @@ export async function sendInvitationAction(
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
 
   // Guardar invitación usando service role (para evitar RLS en este contexto)
-  const adminClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const adminClient = createAdminClient()
 
   const invitationRepo = new SupabaseInvitationRepository(adminClient)
   await invitationRepo.create({

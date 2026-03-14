@@ -1,24 +1,17 @@
 'use server'
 
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import { SupabaseShareholderRepository } from '@/features/onboarding/repositories/shareholder.repository.impl'
 import { SupabaseLegalRepRepository } from '@/features/onboarding/repositories/legal-rep.repository.impl'
 import type { OnboardingInvitation } from '@/features/onboarding/types/onboarding.types'
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 export async function getInvitationByTokenAction(
   token: string,
 ): Promise<{ invitation: OnboardingInvitation | null; error?: string }> {
   if (!token) return { invitation: null, error: 'Token inválido' }
 
-  const adminClient = getAdminClient()
+  const adminClient = createAdminClient()
   const repo = new SupabaseInvitationRepository(adminClient)
   const invitation = await repo.findByToken(token)
 
@@ -51,7 +44,7 @@ export interface AcceptShareholderInvitationInput {
 export async function acceptShareholderInvitationAction(
   input: AcceptShareholderInvitationInput,
 ): Promise<{ success?: boolean; error?: string }> {
-  const adminClient = getAdminClient()
+  const adminClient = createAdminClient()
   const repo = new SupabaseInvitationRepository(adminClient)
 
   const invitation = await repo.findByToken(input.token)
@@ -64,7 +57,7 @@ export async function acceptShareholderInvitationAction(
   try {
     const shareholderRepo = new SupabaseShareholderRepository(adminClient)
     await shareholderRepo.create({
-      companyId: input.companyId,
+      companyId: invitation.companyId,
       esPersonaMoral: input.esPersonaMoral,
       poseeMas25Porciento: input.poseeMas25Porciento,
       porcentajeParticipacion: input.porcentajeParticipacion ?? undefined,
@@ -99,7 +92,7 @@ export interface AcceptLegalRepInvitationInput {
 export async function acceptLegalRepInvitationAction(
   input: AcceptLegalRepInvitationInput,
 ): Promise<{ success?: boolean; error?: string }> {
-  const adminClient = getAdminClient()
+  const adminClient = createAdminClient()
   const repo = new SupabaseInvitationRepository(adminClient)
 
   const invitation = await repo.findByToken(input.token)
@@ -111,7 +104,7 @@ export async function acceptLegalRepInvitationAction(
 
   try {
     const legalRepRepo = new SupabaseLegalRepRepository(adminClient)
-    await legalRepRepo.upsertFromInvitation(input.companyId, {
+    await legalRepRepo.upsertFromInvitation(invitation.companyId, {
       nombres: input.nombres,
       apellidoPaterno: input.apellidoPaterno,
       apellidoMaterno: input.apellidoMaterno,

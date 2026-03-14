@@ -2,8 +2,12 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 const FROM = 'AccesaX <noreply@accesa.mx>'
+
+function escapeHtml(str: string) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
@@ -64,11 +68,12 @@ export async function sendSolicitudRecibidaEmail(
 
   const tipoLabel = tipo === 'factoraje' ? 'factoraje' : 'crédito por proyecto'
   const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://accesa.mx'}/dashboard/credito/${solicitudId}`
+  const safeEmpresa = escapeHtml(empresa)
 
   const html = baseLayout(`
     <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1A1A1A;">Solicitud recibida</h2>
     <p style="margin:0 0 20px;font-size:14px;color:#64748B;line-height:1.6;">
-      Hola <strong>${empresa}</strong>, hemos recibido tu solicitud de <strong>${tipoLabel}</strong> por
+      Hola <strong>${safeEmpresa}</strong>, hemos recibido tu solicitud de <strong>${tipoLabel}</strong> por
       <strong>${mxnFormat(monto)}</strong>. Nuestro equipo la revisará en las próximas 24–48 horas hábiles.
     </p>
     <table cellpadding="0" cellspacing="0" style="background:#F8FAFC;border-radius:10px;padding:16px;width:100%;box-sizing:border-box;">
@@ -80,7 +85,7 @@ export async function sendSolicitudRecibidaEmail(
     ${btnPrimary(dashUrl, 'Ver mi solicitud →')}
   `)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Solicitud recibida — ${mxnFormat(monto)}`,
@@ -98,6 +103,7 @@ export async function sendSolicitudAprobadaEmail(
   if (!process.env.RESEND_API_KEY) return
 
   const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://accesa.mx'}/dashboard/credito/${solicitudId}`
+  const safeEmpresa = escapeHtml(empresa)
 
   const html = baseLayout(`
     <div style="text-align:center;margin-bottom:24px;">
@@ -112,13 +118,13 @@ export async function sendSolicitudAprobadaEmail(
       <tr><td style="font-size:24px;font-weight:800;color:#047857;">${mxnFormat(monto)}</td></tr>
     </table>
     <p style="margin:0;font-size:13px;color:#64748B;line-height:1.7;">
-      Hola <strong>${empresa}</strong>, tu solicitud de financiamiento fue aprobada.
+      Hola <strong>${safeEmpresa}</strong>, tu solicitud de financiamiento fue aprobada.
       Nuestro equipo se pondrá en contacto contigo a la brevedad para coordinar los siguientes pasos y la dispersión de fondos.
     </p>
     ${btnPrimary(dashUrl, 'Ver detalle de mi solicitud →')}
   `)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `✓ Solicitud aprobada — ${mxnFormat(monto)}`,
@@ -136,16 +142,18 @@ export async function sendSolicitudRechazadaEmail(
   if (!process.env.RESEND_API_KEY) return
 
   const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://accesa.mx'}/dashboard/credito/${solicitudId}`
+  const safeEmpresa = escapeHtml(empresa)
+  const safeMotivo = escapeHtml(motivo)
 
   const html = baseLayout(`
     <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1A1A1A;">Actualización sobre tu solicitud</h2>
     <p style="margin:0 0 20px;font-size:14px;color:#64748B;line-height:1.6;">
-      Hola <strong>${empresa}</strong>, luego de revisar tu solicitud por <strong>${mxnFormat(monto)}</strong>,
+      Hola <strong>${safeEmpresa}</strong>, luego de revisar tu solicitud por <strong>${mxnFormat(monto)}</strong>,
       en esta ocasión no podemos continuar con el proceso.
     </p>
-    ${motivo ? `
+    ${safeMotivo ? `
     <div style="background:#FFF7ED;border-left:3px solid #F97316;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:20px;">
-      <p style="margin:0;font-size:13px;color:#9A3412;"><strong>Motivo:</strong> ${motivo}</p>
+      <p style="margin:0;font-size:13px;color:#9A3412;"><strong>Motivo:</strong> ${safeMotivo}</p>
     </div>` : ''}
     <p style="margin:0;font-size:13px;color:#64748B;line-height:1.7;">
       Si tienes preguntas o crees que hubo un error, no dudes en contactarnos respondiendo este correo.
@@ -153,7 +161,7 @@ export async function sendSolicitudRechazadaEmail(
     ${btnPrimary(dashUrl, 'Ver mi solicitud →')}
   `)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Resolución sobre tu solicitud AccesaX`,
@@ -170,15 +178,17 @@ export async function sendDocsPendientesEmail(
   if (!process.env.RESEND_API_KEY) return
 
   const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://accesa.mx'}/dashboard/credito/${solicitudId}`
+  const safeEmpresa = escapeHtml(empresa)
+  const safeNotas = escapeHtml(notas)
 
   const html = baseLayout(`
     <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1A1A1A;">Documentos adicionales requeridos</h2>
     <p style="margin:0 0 20px;font-size:14px;color:#64748B;line-height:1.6;">
-      Hola <strong>${empresa}</strong>, estamos revisando tu solicitud y necesitamos que nos hagas llegar información adicional para continuar.
+      Hola <strong>${safeEmpresa}</strong>, estamos revisando tu solicitud y necesitamos que nos hagas llegar información adicional para continuar.
     </p>
     <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:16px;margin-bottom:20px;">
       <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#92400E;text-transform:uppercase;letter-spacing:0.05em;">Lo que necesitamos</p>
-      <p style="margin:0;font-size:14px;color:#78350F;line-height:1.6;">${notas}</p>
+      <p style="margin:0;font-size:14px;color:#78350F;line-height:1.6;">${safeNotas}</p>
     </div>
     <p style="margin:0;font-size:13px;color:#64748B;">
       Ingresa a tu portal para subir los documentos desde la sección de tu solicitud.
@@ -186,7 +196,7 @@ export async function sendDocsPendientesEmail(
     ${btnPrimary(dashUrl, 'Subir documentos →')}
   `)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Acción requerida — Documentos pendientes`,
@@ -203,6 +213,7 @@ export async function sendFondosLiberadosEmail(
   if (!process.env.RESEND_API_KEY) return
 
   const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://accesa.mx'}/dashboard/credito/${solicitudId}`
+  const safeEmpresa = escapeHtml(empresa)
 
   const html = baseLayout(`
     <div style="text-align:center;margin-bottom:24px;">
@@ -214,13 +225,13 @@ export async function sendFondosLiberadosEmail(
       <tr><td style="font-size:24px;font-weight:800;color:#1E40AF;">${mxnFormat(monto)}</td></tr>
     </table>
     <p style="margin:0;font-size:13px;color:#64748B;line-height:1.7;">
-      Hola <strong>${empresa}</strong>, los fondos para tu solicitud han sido liberados.
+      Hola <strong>${safeEmpresa}</strong>, los fondos para tu solicitud han sido liberados.
       La transferencia puede tomar 1–2 días hábiles dependiendo del banco receptor.
     </p>
     ${btnPrimary(dashUrl, 'Ver detalle →')}
   `)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Fondos liberados — ${mxnFormat(monto)}`,

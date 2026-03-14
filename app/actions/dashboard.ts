@@ -144,6 +144,10 @@ export async function submitCreditApplicationAction(input: SubmitCreditApplicati
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!Number.isFinite(input.montoSolicitado) || input.montoSolicitado <= 0) {
+    return { error: 'Monto inválido' }
+  }
+
   const { error } = await supabase.from('credit_applications').insert({
     company_id: input.companyId,
     tipo_credito: input.tipoCredito,

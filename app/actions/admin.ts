@@ -15,10 +15,16 @@ function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
   return new AdminService(new SupabaseAdminRepository(supabase))
 }
 
+async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  return profile?.role === 'admin'
+}
+
 export async function getApplicationsAction() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+  if (!(await requireAdmin(supabase, user.id))) return { error: 'Sin permisos' }
 
   const service = buildService(supabase)
   const applications = await service.getApplications()
@@ -29,6 +35,7 @@ export async function getApplicationWithDetailsAction(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+  if (!(await requireAdmin(supabase, user.id))) return { error: 'Sin permisos' }
 
   const service = buildService(supabase)
   const application = await service.getApplicationWithDetails(id)
@@ -44,6 +51,7 @@ export async function changeApplicationStatusAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+  if (!(await requireAdmin(supabase, user.id))) return { error: 'Sin permisos' }
 
   try {
     const service = buildService(supabase)
@@ -107,6 +115,7 @@ export async function addNoteAction(creditApplicationId: string, note: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+  if (!(await requireAdmin(supabase, user.id))) return { error: 'Sin permisos' }
 
   try {
     const service = buildService(supabase)
@@ -595,6 +604,12 @@ export async function liberarFondosAction(
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') return { error: 'Sin permisos' }
+
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRe.test(applicationId)) return { error: 'ID de solicitud inválido' }
+  if (!referencia.trim()) return { error: 'Referencia requerida' }
+  if (!Number.isFinite(montoDisperso) || montoDisperso <= 0) return { error: 'Monto inválido' }
+  if (!fechaLiquidacionEst || isNaN(new Date(fechaLiquidacionEst).getTime())) return { error: 'Fecha inválida' }
 
   const { error } = await supabase
     .from('credit_applications')
