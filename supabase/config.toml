@@ -1,3 +1,6 @@
+[functions.sync-sat-full]
+verify_jwt = false
+
 [functions.syntage-connect]
 verify_jwt = false
 

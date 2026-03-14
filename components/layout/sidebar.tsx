@@ -5,9 +5,16 @@ import {
   LayoutDashboard, Users, BarChart3, CreditCard, User, LogOut,
   ChevronDown, TrendingUp, TrendingDown, Clock, AlertCircle,
   FileText, PlusCircle, Truck, Activity, Wallet, Percent, UsersRound,
+  Check, Building2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { signOutAction } from '@/app/actions/dashboard'
+import {
+  getAccessibleCompaniesAction,
+  switchCompanyAction,
+  getActiveCompanyIdAction,
+} from '@/app/actions/company-switcher'
+import type { AccessibleCompany } from '@/lib/company-types'
 
 type SubItem = { label: string; href: string; icon: React.ElementType }
 type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[] }
@@ -63,6 +70,87 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
   },
 ]
 
+function CompanySwitcher() {
+  const router = useRouter()
+  const [companies, setCompanies] = useState<AccessibleCompany[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    Promise.all([getAccessibleCompaniesAction(), getActiveCompanyIdAction()]).then(
+      ([list, id]) => {
+        setCompanies(list)
+        setActiveId(id ?? (list[0]?.id ?? null))
+      }
+    )
+  }, [])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function handleSwitch(id: string) {
+    setOpen(false)
+    if (id === activeId) return
+    await switchCompanyAction(id)
+    setActiveId(id)
+    router.refresh()
+  }
+
+  const active = companies.find((c) => c.id === activeId) ?? companies[0]
+
+  return (
+    <div ref={ref} className="relative px-3 pt-4 pb-3 border-b border-white/10">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors group"
+      >
+        <div className="h-7 w-7 shrink-0 flex items-center justify-center">
+          <AccesaIcon className="h-7 w-7" />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-[11px] font-semibold text-white truncate leading-tight">
+            {active?.name ?? 'accesa'}
+          </p>
+          {active && (
+            <p className="text-[10px] text-white/40 truncate leading-tight">{active.rfc}</p>
+          )}
+        </div>
+        <ChevronDown className={`h-3.5 w-3.5 text-white/40 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && companies.length > 0 && (
+        <div className="absolute left-3 right-3 top-full mt-1 z-50 bg-[#2A2A2E] border border-white/10 rounded-xl shadow-xl overflow-hidden">
+          <p className="px-3 pt-2.5 pb-1 text-[10px] font-semibold text-white/30 uppercase tracking-widest">
+            Empresas
+          </p>
+          {companies.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => handleSwitch(c.id)}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
+            >
+              <div className="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                <Building2 className="h-3.5 w-3.5 text-white/60" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-white truncate">{c.name}</p>
+                <p className="text-[10px] text-white/40 truncate">{c.rfc}</p>
+              </div>
+              {c.id === activeId && <Check className="h-3.5 w-3.5 text-[#00C896] shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -98,13 +186,8 @@ export function Sidebar() {
 
   return (
     <aside className="fixed top-0 left-0 h-screen w-56 bg-[#1C1C1E] flex flex-col z-30">
-      {/* Logo */}
-      <div className="px-4 pt-6 pb-5 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <AccesaIcon className="h-7 w-7 shrink-0" />
-          <span className="text-white font-bold text-base tracking-tight">accesa</span>
-        </div>
-      </div>
+      {/* Company switcher */}
+      <CompanySwitcher />
 
       {/* Nav */}
       <nav className="flex-1 py-3 overflow-y-auto">

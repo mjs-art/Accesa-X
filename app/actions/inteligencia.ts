@@ -1,7 +1,9 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveCompany } from '@/lib/get-company-context'
+import { ACTIVE_COMPANY_COOKIE } from '@/lib/company-types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -10,7 +12,10 @@ async function getCompanyContext() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const company = await getEffectiveCompany(supabase, user.id)
+  const cookieStore = await cookies()
+  const preferredId = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value ?? null
+
+  const company = await getEffectiveCompany(supabase, user.id, preferredId)
   if (!company) return null
   return { supabase, user, company }
 }

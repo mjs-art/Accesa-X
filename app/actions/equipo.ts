@@ -1,8 +1,10 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectiveCompanyId } from '@/lib/get-company-context'
+import { ACTIVE_COMPANY_COOKIE } from '@/lib/company-types'
 
 export type MemberRole = 'admin' | 'viewer'
 export type MemberStatus = 'pending' | 'active'
@@ -23,7 +25,9 @@ export interface TeamMember {
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 async function getCurrentCompanyId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  return getEffectiveCompanyId(supabase, userId)
+  const cookieStore = await cookies()
+  const preferredId = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value ?? null
+  return getEffectiveCompanyId(supabase, userId, preferredId)
 }
 
 // ─── actions ────────────────────────────────────────────────────────────────
