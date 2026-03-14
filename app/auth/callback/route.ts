@@ -34,6 +34,15 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
+      // Link any pending team invitations for this email
+      if (data.user.email) {
+        await supabase
+          .from('company_members')
+          .update({ user_id: data.user.id, status: 'active' })
+          .eq('invited_email', data.user.email)
+          .eq('status', 'pending')
+      }
+
       // Si el next ya viene especificado en la URL, respetarlo
       if (next !== '/dashboard' && next !== '/onboarding/empresa') {
         return NextResponse.redirect(`${origin}${next}`)

@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BarChart3, CreditCard, User, LogOut,
   ChevronDown, TrendingUp, TrendingDown, Clock, AlertCircle,
-  FileText, PlusCircle, Truck, Activity, Wallet, Percent,
+  FileText, PlusCircle, Truck, Activity, Wallet, Percent, UsersRound,
 } from 'lucide-react'
 import { useState } from 'react'
 import { signOutAction } from '@/app/actions/dashboard'
@@ -23,6 +23,7 @@ const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
     items: [
       { label: 'Clientes', href: '/dashboard/clientes', icon: Users },
       { label: 'Proveedores', href: '/dashboard/proveedores', icon: Truck },
+      { label: 'Equipo', href: '/dashboard/equipo', icon: UsersRound },
       {
         label: 'Inteligencia',
         href: '/dashboard/inteligencia',
