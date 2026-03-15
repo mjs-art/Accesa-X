@@ -27,15 +27,17 @@ const STEP_PATHS: Record<OnboardingStep, string> = {
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const nextRaw = searchParams.get('next') ?? ''
+  const ALLOWED_NEXT = ['/dashboard', '/onboarding/empresa', '/solicitar-credito']
+  const next = ALLOWED_NEXT.includes(nextRaw) ? nextRaw : null
 
   if (code) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // Si el next ya viene especificado en la URL, respetarlo
-      if (next !== '/dashboard' && next !== '/onboarding/empresa') {
+      // Si next está en la whitelist, redirigir directamente
+      if (next) {
         return NextResponse.redirect(`${origin}${next}`)
       }
 
