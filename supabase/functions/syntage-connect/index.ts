@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,6 +43,15 @@ serve(async (req) => {
     }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // 1b. Rate limit: máximo 3 validaciones SAT por usuario por hora
+    const rl = await checkRateLimit(adminClient, user.id, 'syntage-connect', 3, 3600)
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Límite de validaciones SAT alcanzado. Intenta en una hora.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
 
     // 2. Parsear y validar body
     const { rfc, ciec, company_id } = await req.json()

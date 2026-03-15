@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { encode as encodeBase64 } from 'https://deno.land/std@0.168.0/encoding/base64.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +52,15 @@ serve(async (req) => {
       return jsonError(`Unauthorized: ${userError?.message}`, 401)
     }
     console.log('STEP 1 OK: user', user.id)
+
+    // 1b. Rate limit: máximo 10 análisis por usuario por hora
+    const rl = await checkRateLimit(adminClient, user.id, 'analyze-contract', 10, 3600)
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Límite de análisis alcanzado. Intenta en una hora.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
 
     // 2. Parsear body
     const body = await req.json()

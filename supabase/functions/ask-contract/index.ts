@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,15 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: userError } = await adminClient.auth.getUser(token)
     if (userError || !user) return jsonError('Unauthorized', 401)
+
+    // 1b. Rate limit: máximo 30 preguntas por usuario por hora
+    const rl = await checkRateLimit(adminClient, user.id, 'ask-contract', 30, 3600)
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Límite de consultas alcanzado. Intenta en una hora.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
 
     // 2. Parse body
     const { contract_id, question } = await req.json()

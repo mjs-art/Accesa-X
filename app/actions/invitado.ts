@@ -1,5 +1,6 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { SupabaseInvitationRepository } from '@/features/onboarding/repositories/invitation.repository.impl'
 import { SupabaseShareholderRepository } from '@/features/onboarding/repositories/shareholder.repository.impl'
@@ -13,10 +14,42 @@ function getAdminClient() {
   )
 }
 
+async function checkInvitationRateLimit(ip: string): Promise<boolean> {
+  const adminClient = getAdminClient()
+  const since = new Date(Date.now() - 3600 * 1000).toISOString()
+
+  const { count, error } = await adminClient
+    .from('rate_limits')
+    .select('*', { count: 'exact', head: true })
+    .eq('key', ip)
+    .eq('action', 'invitation-lookup')
+    .gte('called_at', since)
+
+  if (error) return true // fail open
+
+  if ((count ?? 0) >= 20) return false
+
+  await adminClient.from('rate_limits').insert({ key: ip, action: 'invitation-lookup' }).catch(() => {})
+  return true
+}
+
+function getClientIp(): string {
+  const headersList = headers()
+  return (
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    headersList.get('x-real-ip') ??
+    'unknown'
+  )
+}
+
 export async function getInvitationByTokenAction(
   token: string,
 ): Promise<{ invitation: OnboardingInvitation | null; error?: string }> {
   if (!token) return { invitation: null, error: 'Token inválido' }
+
+  const ip = getClientIp()
+  const allowed = await checkInvitationRateLimit(ip)
+  if (!allowed) return { invitation: null, error: 'Demasiados intentos. Intenta más tarde.' }
 
   const adminClient = getAdminClient()
   const repo = new SupabaseInvitationRepository(adminClient)

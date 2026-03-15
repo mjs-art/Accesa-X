@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +29,24 @@ serve(async (req) => {
     if (userError || !user) return jsonError('Unauthorized', 401)
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // 0a. Verificar que el usuario es admin
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') return jsonError('Forbidden', 403)
+
+    // 0b. Rate limit: máximo 5 resets por admin por hora
+    const rl = await checkRateLimit(adminClient, user.id, 'debug-reset-syntage', 5, 3600)
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Demasiadas solicitudes. Intenta más tarde.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) } }
+      )
+    }
 
     // 1. Obtener empresa
     const { data: company, error: companyError } = await adminClient
