@@ -73,7 +73,19 @@ serve(async (req) => {
       console.error('STEP 3 FAIL: Contract not found', contractError?.message)
       return jsonError('Contrato no encontrado', 404)
     }
-    console.log('STEP 3 OK: contract found')
+
+    const { data: company, error: companyError } = await adminClient
+      .from('companies')
+      .select('id')
+      .eq('id', contract.company_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (companyError || !company) {
+      console.error('STEP 3 FAIL: Ownership check failed for user', user.id)
+      return jsonError('Contrato no encontrado', 404)
+    }
+    console.log('STEP 3 OK: contract found and ownership verified')
 
     // 4. Marcar como processing
     await adminClient

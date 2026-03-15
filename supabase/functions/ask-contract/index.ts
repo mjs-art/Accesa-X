@@ -30,17 +30,31 @@ serve(async (req) => {
     const { contract_id, question } = await req.json()
     if (!contract_id || !question?.trim()) return jsonError('Faltan campos: contract_id, question', 400)
 
-    // 3. Fetch contract analysis
+    const trimmedQuestion = String(question).trim().slice(0, 1000)
+
+    // 3. Fetch contract analysis and verify ownership
     const { data: contract, error: contractError } = await adminClient
       .from('contracts')
-      .select('id, analysis_result, analysis_status')
+      .select('id, company_id, analysis_result, analysis_status')
       .eq('id', contract_id)
       .single()
 
     if (contractError || !contract) return jsonError('Contrato no encontrado', 404)
+
+    const { data: company, error: companyError } = await adminClient
+      .from('companies')
+      .select('id')
+      .eq('id', contract.company_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (companyError || !company) return jsonError('Contrato no encontrado', 404)
+
     if (!contract.analysis_result) return jsonError('El contrato aún no ha sido analizado', 400)
 
     // 4. Llamar a Claude con el contexto del análisis
+    // El contexto del sistema y la pregunta del usuario se envían en mensajes separados
+    // para evitar prompt injection desde el campo `question`.
     const contextJson = JSON.stringify(contract.analysis_result, null, 2)
 
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -53,18 +67,21 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: `Eres un asistente experto en análisis de contratos legales y financieros. Tienes acceso al siguiente análisis de un contrato en formato JSON:
-
-\`\`\`json
-${contextJson}
-\`\`\`
-
-El usuario pregunta: "${question}"
-
-Responde de forma clara y concisa en español, basándote en el análisis del contrato. Si la pregunta no puede responderse con la información disponible, indícalo amablemente y sugiere qué información adicional sería necesaria.`,
-        }],
+        system: 'Eres un asistente experto en análisis de contratos legales y financieros. Responde de forma clara y concisa en español, basándote únicamente en el análisis del contrato que el usuario te proporcionará. Si la pregunta no puede responderse con la información disponible, indícalo amablemente y sugiere qué información adicional sería necesaria.',
+        messages: [
+          {
+            role: 'user',
+            content: `Aquí está el análisis del contrato en formato JSON:\n\n\`\`\`json\n${contextJson}\n\`\`\``,
+          },
+          {
+            role: 'assistant',
+            content: 'Entendido, he revisado el análisis del contrato. ¿En qué puedo ayudarte?',
+          },
+          {
+            role: 'user',
+            content: trimmedQuestion,
+          },
+        ],
       }),
     })
 
