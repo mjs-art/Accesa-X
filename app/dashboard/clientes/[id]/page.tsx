@@ -88,7 +88,7 @@ export default function ClientePage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const rfc = decodeURIComponent(id)
-  const clienteNombre = searchParams.get('nombre') ?? rfc
+  const [clienteNombre, setClienteNombre] = useState(searchParams.get('nombre') ?? rfc)
 
   const [contratos, setContratos] = useState<Contrato[]>([])
   const [loadingContratos, setLoadingContratos] = useState(true)
@@ -121,7 +121,9 @@ export default function ClientePage() {
       .eq('nombre_cliente', clienteNombre)
       .order('uploaded_at', { ascending: false })
 
-    setContratos((data as unknown as Contrato[]) ?? [])
+    const parsed = (data as unknown as Contrato[]) ?? []
+    setContratos(parsed)
+    if (parsed.length > 0) setClienteNombre(parsed[0].nombre_cliente)
     setLoadingContratos(false)
   }
 

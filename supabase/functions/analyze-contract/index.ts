@@ -95,6 +95,14 @@ serve(async (req) => {
 
     // 6. Convertir a base64 con método eficiente de Deno
     const arrayBuffer = await fileData.arrayBuffer()
+
+    // Validar magic bytes: los PDF válidos empiezan con %PDF (0x25 0x50 0x44 0x46)
+    const header = new Uint8Array(arrayBuffer, 0, 4)
+    if (header[0] !== 0x25 || header[1] !== 0x50 || header[2] !== 0x44 || header[3] !== 0x46) {
+      throw new Error('El archivo no es un PDF válido')
+    }
+    console.log('STEP 6 OK: magic bytes validados')
+
     const pdfBase64 = encodeBase64(arrayBuffer)
     console.log('STEP 6 OK: base64 length', pdfBase64.length)
 
