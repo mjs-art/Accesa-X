@@ -73,6 +73,7 @@ serve(async (req) => {
 
     // 4. Crear credencial en Syntage
     // POST /credentials — requiere type: "ciec" (o "efirma")
+    // IMPORTANT: nunca loguear `ciec` ni el body de esta llamada.
     const credentialRes = await fetch(`${SYNTAGE_BASE_URL}/credentials`, {
       method: 'POST',
       headers: syntageHeaders,
@@ -80,8 +81,9 @@ serve(async (req) => {
     })
 
     if (!credentialRes.ok) {
-      const errText = await credentialRes.text()
-      return jsonError(`Error al conectar con SAT: ${errText}`, 400)
+      // No se echan los detalles de Syntage al cliente: podrían reflejar la contraseña.
+      console.error('syntage-connect: credential creation failed, status', credentialRes.status)
+      return jsonError('Error al conectar con SAT. Verifica tu RFC y CIEC.', 400)
     }
 
     const credentialData = await credentialRes.json()
@@ -167,8 +169,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('syntage-connect error:', err)
-    return jsonError(err instanceof Error ? err.message : 'Error interno', 500)
+    // Loguear solo el mensaje, nunca el objeto completo (podría contener ciec en el stack).
+    const msg = err instanceof Error ? err.message : 'Error interno'
+    console.error('syntage-connect error:', msg)
+    return jsonError('Error interno al procesar la solicitud', 500)
   }
 })
 
