@@ -110,8 +110,20 @@ export interface AnalyzedContract {
   montoContrato: number | null
 }
 
-export async function getAnalyzedContractsAction(companyId: string): Promise<{ contracts: AnalyzedContract[] }> {
+export async function getAnalyzedContractsAction(companyId: string): Promise<{ contracts: AnalyzedContract[]; error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { contracts: [], error: 'No autenticado' }
+
+  // Verify the user owns this company before returning its contracts.
+  const { data: company } = await supabase
+    .from('companies')
+    .select('id')
+    .eq('id', companyId)
+    .eq('user_id', user.id)
+    .single()
+  if (!company) return { contracts: [], error: 'No autorizado' }
+
   const { data } = await supabase
     .from('contracts')
     .select('id, nombre_cliente, storage_path, monto_contrato')
@@ -144,6 +156,15 @@ export async function submitCreditApplicationAction(input: SubmitCreditApplicati
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  // Verify the user owns the company they are applying for.
+  const { data: company } = await supabase
+    .from('companies')
+    .select('id')
+    .eq('id', input.companyId)
+    .eq('user_id', user.id)
+    .single()
+  if (!company) return { error: 'No autorizado' }
+
   const { error } = await supabase.from('credit_applications').insert({
     company_id: input.companyId,
     tipo_credito: input.tipoCredito,
@@ -154,7 +175,7 @@ export async function submitCreditApplicationAction(input: SubmitCreditApplicati
     status: 'submitted',
   })
 
-  if (error) return { error: error.message }
+  if (error) return { error: 'Error al enviar solicitud. Intenta de nuevo.' }
   return { success: true }
 }
 

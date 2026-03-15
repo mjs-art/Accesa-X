@@ -27,9 +27,9 @@ export async function checkRateLimit(
     .gte('called_at', since)
 
   if (error) {
-    // Fail open: if we can't check, allow the request rather than block everyone.
+    // Fail closed: if the DB is unreachable we deny rather than bypass rate limiting.
     console.error('rate-limit check error:', error.message)
-    return { allowed: true }
+    return { allowed: false, retryAfterSeconds: windowSeconds }
   }
 
   if ((count ?? 0) >= limit) {

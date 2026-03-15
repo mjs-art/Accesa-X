@@ -155,8 +155,9 @@ serve(async (req) => {
 
     const anthropicBody = await anthropicRes.json()
     if (!anthropicRes.ok) {
+      // Log full details server-side only — never send Claude API internals to the client.
       console.error('STEP 7 FAIL: Claude error', JSON.stringify(anthropicBody))
-      throw new Error(`Claude API error: ${anthropicBody?.error?.message ?? JSON.stringify(anthropicBody)}`)
+      throw new InternalError('Error al analizar el contrato con IA. Intenta de nuevo.')
     }
     console.log('STEP 7 OK: Claude responded')
 
@@ -169,7 +170,9 @@ serve(async (req) => {
       const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
       analysisResult = JSON.parse(cleaned)
     } catch {
-      throw new Error(`JSON parse error. Claude respondió: ${rawText.substring(0, 300)}`)
+      // Log Claude's raw output internally; don't leak partial contract text to client.
+      console.error('STEP 8 FAIL: JSON parse error. Raw:', rawText.substring(0, 300))
+      throw new InternalError('No se pudo interpretar el análisis del contrato. Intenta de nuevo.')
     }
     console.log('STEP 8 OK: JSON parsed')
 
@@ -196,7 +199,10 @@ serve(async (req) => {
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error interno'
-    console.error('FATAL ERROR:', msg)
+    // Only log details for unexpected errors (InternalError already logged above).
+    if (!(err instanceof InternalError)) {
+      console.error('FATAL ERROR:', msg)
+    }
 
     if (contractId) {
       await adminClient
@@ -206,9 +212,14 @@ serve(async (req) => {
         .catch(() => {})
     }
 
-    return jsonError(msg, 500)
+    // InternalError carries a safe user-facing message; other errors get a generic one.
+    const clientMsg = err instanceof InternalError ? msg : 'Error interno al analizar el contrato'
+    return jsonError(clientMsg, 500)
   }
 })
+
+/** Error with a pre-sanitized message safe to send to the client. */
+class InternalError extends Error {}
 
 function jsonError(message: string, status: number) {
   return new Response(

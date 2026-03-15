@@ -96,8 +96,9 @@ export async function acceptShareholderInvitationAction(
 
   try {
     const shareholderRepo = new SupabaseShareholderRepository(adminClient)
+    // Use companyId from the invitation (server-validated), not from client input.
     await shareholderRepo.create({
-      companyId: input.companyId,
+      companyId: invitation.companyId,
       esPersonaMoral: input.esPersonaMoral,
       poseeMas25Porciento: input.poseeMas25Porciento,
       porcentajeParticipacion: input.porcentajeParticipacion ?? undefined,
@@ -144,7 +145,8 @@ export async function acceptLegalRepInvitationAction(
 
   try {
     const legalRepRepo = new SupabaseLegalRepRepository(adminClient)
-    await legalRepRepo.upsertFromInvitation(input.companyId, {
+    // Use companyId from the invitation (server-validated), not from client input.
+    await legalRepRepo.upsertFromInvitation(invitation.companyId, {
       nombres: input.nombres,
       apellidoPaterno: input.apellidoPaterno,
       apellidoMaterno: input.apellidoMaterno,

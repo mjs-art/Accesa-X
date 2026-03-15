@@ -26,6 +26,21 @@ function buildService(supabase: Awaited<ReturnType<typeof createClient>>) {
   )
 }
 
+/** Verifica que la empresa con `companyId` pertenece al usuario autenticado. */
+async function verifyOwnership(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  companyId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('companies')
+    .select('id')
+    .eq('id', companyId)
+    .eq('user_id', userId)
+    .single()
+  return !!data
+}
+
 export async function saveEmpresaAction(formData: unknown) {
   const parsed = companySchema.safeParse(formData)
   if (!parsed.success) {
@@ -59,13 +74,14 @@ export async function saveLegalRepAction(companyId: string, formData: unknown) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const service = buildService(supabase)
     const legalRep = await service.saveLegalRep(companyId, parsed.data)
     return { success: true, legalRep }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Error desconocido'
-    return { error: msg }
+  } catch {
+    return { error: 'Error al guardar. Intenta de nuevo.' }
   }
 }
 
@@ -73,6 +89,8 @@ export async function getLegalRepAction(companyId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
 
   const repo = new SupabaseLegalRepRepository(supabase)
   const legalRep = await repo.findByCompanyId(companyId)
@@ -90,12 +108,14 @@ export async function saveLegalRepDocAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const repo = new SupabaseDocumentRepository(supabase)
     const doc = await repo.createLegalRepDoc({ legalRepId, companyId, documentType, fileUrl, storagePath })
     return { success: true, doc }
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Error al guardar documento' }
+  } catch {
+    return { error: 'Error al guardar documento' }
   }
 }
 
@@ -109,12 +129,14 @@ export async function saveCompanyDocAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const repo = new SupabaseDocumentRepository(supabase)
     const doc = await repo.upsertCompanyDoc({ companyId, documentType, fileUrl, storagePath })
     return { success: true, doc }
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Error al guardar documento' }
+  } catch {
+    return { error: 'Error al guardar documento' }
   }
 }
 
@@ -131,6 +153,8 @@ export async function saveShareholdersAction(companyId: string, shareholders: un
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const service = buildService(supabase)
     const saved = await service.saveShareholders(companyId, validData)
@@ -140,7 +164,7 @@ export async function saveShareholdersAction(companyId: string, shareholders: un
     if (msg === 'SHAREHOLDERS_REQUIRED') {
       return { error: 'Debes agregar al menos un accionista.' }
     }
-    return { error: msg }
+    return { error: 'Error al guardar. Intenta de nuevo.' }
   }
 }
 
@@ -149,12 +173,14 @@ export async function advanceToStepAction(companyId: string, step: OnboardingSte
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const service = buildService(supabase)
     await service.advanceToStep(companyId, step)
     return { success: true }
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Error desconocido' }
+  } catch {
+    return { error: 'Error al actualizar paso. Intenta de nuevo.' }
   }
 }
 
@@ -163,12 +189,14 @@ export async function completeOnboardingAction(companyId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
 
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
+
   try {
     const service = buildService(supabase)
     await service.completeOnboarding(companyId)
     return { success: true }
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Error desconocido' }
+  } catch {
+    return { error: 'Error al completar onboarding. Intenta de nuevo.' }
   }
 }
 
@@ -176,6 +204,8 @@ export async function getShareholdersAction(companyId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
 
   const repo = new SupabaseShareholderRepository(supabase)
   const shareholders = await repo.findByCompanyId(companyId)
@@ -186,6 +216,8 @@ export async function getCompanyDocsAction(companyId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autenticado' }
+
+  if (!(await verifyOwnership(supabase, companyId, user.id))) return { error: 'No autorizado' }
 
   const repo = new SupabaseDocumentRepository(supabase)
   const docs = await repo.getCompanyDocs(companyId)
